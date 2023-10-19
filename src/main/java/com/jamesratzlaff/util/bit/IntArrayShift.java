@@ -1,17 +1,30 @@
 package com.jamesratzlaff.util.bit;
 
+
 public class IntArrayShift {
 
 	private static final BitUnit unit = BitUnit.INT;
-
-	public static int[] nonMutatingBitwiseRightShiftCyclic(int[] bits, int size, int amt) {
+	/**
+	 * 
+	 * @param bits an <code>int[]</code> that represents bits
+	 * @param size the number of <i>bit</i> this <code>int[]</code> represents
+	 * @param amt the amount to rotate the bits, a positive value will rotate right, a negative value will rotate left
+	 * @return a copy of the passed in <code>bits</code> parameter with the copy's bits rotated
+	 */
+	public static int[] nonMutatingBitwiseRotate(int[] bits, int size, int amt) {
 		int[] copy = new int[bits.length];
 		System.arraycopy(bits, 0, copy, 0, bits.length);
-		return bitwiseRightShiftCyclic(copy, size, amt);
+		return bitwiseRotate(copy, size, amt);
 	}
 
-	public static int[] bitwiseRightShiftCyclic(int[] bits, int size, int amt) {
-		int ogAmt=amt;
+	/**
+	 * 
+	 * @param bits an <code>int[]</code> that represents bits
+	 * @param size the number of <i>bit</i> this <code>int[]</code> represents
+	 * @param amt the amount to rotate the bits, a positive value will rotate right, a negative value will rotate left
+	 * @return the passed in <code>bits</code> parameter with its bits rotated
+	 */
+	public static int[] bitwiseRotate(int[] bits, int size, int amt) {
 		amt = normalizeCyclic(amt, size);
 		int unitShifts = amt >>> unit.multOrDivShift();
 		amt -= (unitShifts << unit.multOrDivShift());
@@ -19,44 +32,36 @@ public class IntArrayShift {
 		int carryMask = maskShifts!=unit.bits()?(-1 >>> maskShifts):0;
 		int lastCarryMask = carryMask;
 		int lastIndexBits = size & unit.limitMask();
+		final int lastCarryMaskShift = unit.bits()-lastIndexBits;
 		int bleedOverSize = amt - lastIndexBits;//lastCarryMaskLen;
 		if (bleedOverSize < 0) {
 			bleedOverSize = 0;
 		}
 		if (lastIndexBits != 0) {
-			lastCarryMask = maskShifts!=unit.bits()?(-1 >>> Math.max(unit.bits()-lastIndexBits, maskShifts)):0;
-		}
-		if(ogAmt==12) {
-			System.out.print("");
+			lastCarryMask = maskShifts!=unit.bits()?(-1 >>> Math.max(lastCarryMaskShift, maskShifts)):0;
 		}
 		int lastSegmentIndex = bits.length - 1;
 		int shiftedLastSegmentIndex = normalizeCyclic(unitShifts + lastSegmentIndex, bits.length);
-//		System.out.println("bitsb:\t\t"+toBinaryString(bits, size));
-		bits = shiftRight(bits, unitShifts);
-		if(ogAmt==54||ogAmt==32) {
-			System.out.print("");
-		}
+		bits = rotate(bits, unitShifts);
+		
 		if (shiftedLastSegmentIndex != lastSegmentIndex) {
-			int prevIdxGrabMask = ~(-1>>>(unit.bits()-lastIndexBits)) >>> lastIndexBits;
+			
+			int prevIdxGrabMask = ~(-1>>>(lastCarryMaskShift)) >>> lastIndexBits;
 			for (int i = 0; i < bits.length - 1; i++) {
 				int currentIndex = normalizeCyclic(shiftedLastSegmentIndex - i, bits.length);
 				if(currentIndex==bits.length-1) {
 					break;
 				}
-//				System.out.println("c:" + currentIndex);
 				int prevIndex = normalizeCyclic(currentIndex - 1, bits.length);
 				int orVal = bits[prevIndex];
 				orVal &= prevIdxGrabMask;
 				orVal = orVal << lastIndexBits;
 				bits[currentIndex] |= orVal;
-				bits[prevIndex] = bits[prevIndex] >>> unit.bits()-lastIndexBits;
+				bits[prevIndex] = bits[prevIndex] >>> lastCarryMaskShift;
 				
 
 			}
-//			System.out.println("shifted: "+toBinaryString(bits,size));
 		}
-		
-//		System.out.println("bitsa:\t\t"+toBinaryString(bits, size));
 		int[] orVals=new int[bits.length];
 		for (int i = 0; i < bits.length; i++) {
 			int mask = carryMask;
@@ -66,7 +71,6 @@ public class IntArrayShift {
 				mask = lastCarryMask;
 				reshift = Integer.numberOfLeadingZeros(lastCarryMask);//carryMaskReShiftLen;
 				nextUnit=0;
-//				carryMasks[0]=carryMasks[0]|bleedOverMask;
 			}
 			if(i==lastSegmentIndex-1) {
 				if(amt<lastIndexBits) {
@@ -76,13 +80,10 @@ public class IntArrayShift {
 				}
 			}
 			int orVal = mask & bits[i];
-//			System.out.println("orVal("+i+"):\t"+toBinaryString(orVal));
 			orVal = orVal << reshift;
-//			System.out.println("sorVal("+i+"):\t"+toBinaryString(orVal));
 			orVals[nextUnit] = orVal;
 		}
 		
-//		shiftRight(orVals, 1);
 		if(bleedOverSize>0) {
 			int bleedOverShifts=unit.bits()-bleedOverSize;
 			int bleedGrabMask=(-1>>>bleedOverShifts);
@@ -93,19 +94,30 @@ public class IntArrayShift {
 			orVals[0]|=grabbedValue;
 		}
 		
-//		System.out.println("orVals:\t\t"+toBinaryString(orVals));
 		for(int i=0;i<bits.length;i++) {
 			bits[i]=(bits[i]>>>amt)|orVals[i];
 		}
 		return bits;
 	}
-	public static int[] shiftRight(int[] array, int amt) {
-		int[] reso = nonMutatingShiftRight(array, amt);
+	/**
+	 * 
+	 * @param array the <code>int[]</code> of values to rotate 
+	 * @param amt the amount to rotate values contained in the <code>array</code> parameter, positive values rotate to the right, negative values rotate to the left
+	 * @return the given <code>array</cod> parameter with each int value rotated
+	 */
+	public static int[] rotate(int[] array, int amt) {
+		int[] reso = nonMutatingRotate(array, amt);
 		System.arraycopy(reso, 0, array, 0, array.length);
 		return array;
 	}
 
-	public static int[] nonMutatingShiftRight(int[] array, int amt) {
+	/**
+	 * 
+	 * @param array the <code>int[]</code> of values to rotate 
+	 * @param amt the amount to rotate values contained in the <code>array</code> parameter, positive values rotate to the right, negative values rotate to the left
+	 * @return a copy of the given <code>array</cod> parameter with each int value rotated
+	 */
+	public static int[] nonMutatingRotate(int[] array, int amt) {
 		amt = normalizeCyclic(amt, array.length);
 		if (amt > 0) {
 			int[] result = new int[array.length];
@@ -116,6 +128,7 @@ public class IntArrayShift {
 		}
 		return array;
 	}
+	
 	private static int normalizeCyclic(int value, int bound) {
 		if (value < 0) {
 			if (-value > bound) {
