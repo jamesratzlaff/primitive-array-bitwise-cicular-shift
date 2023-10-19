@@ -116,4 +116,28 @@ public class IntArrayShift {
 		}
 		return array;
 	}
+	private static int normalizeCyclic(int value, int bound) {
+		if (value < 0) {
+			if (-value > bound) {
+				if (bound == unit.bits()) {
+					value = value & unit.limitMask();
+				} else {
+					value %= bound;
+				}
+			}
+			value = bound + value;
+		}
+		if (value == bound) {
+			return 0;
+		}
+		if (value > bound) {
+			if (bound == unit.bits()) {
+				value = value & unit.limitMask();
+			} else {
+				value %= bound;
+			}
+		}
+
+		return value;
+	}
 }
