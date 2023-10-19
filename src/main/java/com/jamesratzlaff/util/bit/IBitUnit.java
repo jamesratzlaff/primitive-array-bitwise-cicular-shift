@@ -13,6 +13,7 @@ public interface IBitUnit {
 	default int multOrDivShift() {
 		return log2();
 	}
+	
 	default int per(BitUnit other) {
 		return other.bits()>>>this.multOrDivShift();
 	}
