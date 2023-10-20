@@ -1,5 +1,9 @@
 package com.jamesratzlaff.util.bit;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+
 public class LongArrayShift {
 
 	private static final BitUnit unit = BitUnit.LONG;
@@ -28,16 +32,16 @@ public class LongArrayShift {
 		long unitShifts = amt >>> unit.multOrDivShift();
 		amt -= (unitShifts << unit.multOrDivShift());
 		long maskShifts = unit.bits() - amt;
-		long carryMask = maskShifts!=unit.bits()?(-1 >>> maskShifts):0;
+		long carryMask = maskShifts!=unit.bits()?(-1l >>> maskShifts):0l;
 		long lastCarryMask = carryMask;
 		long lastIndexBits = size & unit.limitMask();
 		final long lastCarryMaskShift = unit.bits()-lastIndexBits;
 		long bleedOverSize = amt - lastIndexBits;//lastCarryMaskLen;
 		if (bleedOverSize < 0) {
-			bleedOverSize = 0;
+			bleedOverSize = 0l;
 		}
 		if (lastIndexBits != 0) {
-			lastCarryMask = maskShifts!=unit.bits()?(-1 >>> Math.max(lastCarryMaskShift, maskShifts)):0;
+			lastCarryMask = maskShifts!=unit.bits()?(-1l >>> Math.max(lastCarryMaskShift, maskShifts)):0l;
 		}
 		int lastSegmentIndex = bits.length - 1;
 		long shiftedLastSegmentIndex = normalizeCyclic(unitShifts + lastSegmentIndex, bits.length);
@@ -98,6 +102,54 @@ public class LongArrayShift {
 		}
 		return bits;
 	}
+	private static void printB(long val) {
+		System.out.println(toBin(val));
+	}
+	private static String toBin(long val) {
+		return toBin(null,null,val);
+	}
+	private static void printB(String label, long val) {
+		System.out.println(toBin(label,val));
+	}
+	private static String toBin(String label, long val) {
+		return toBin(label,null,val);
+	}
+	private static void printB(String label,String delim, long val) {
+		System.out.println(toBin(label,delim,val));
+	}
+	private static String toBin(String label, String delim, long val) {
+		StringBuilder sb = new StringBuilder();
+		if(label!=null) {
+			sb.append(label);
+			if(!label.endsWith(":")) {
+				sb.append(':');
+			}
+			if(delim!=null) {
+				sb.append(delim);
+			} else {
+				sb.append("\t");
+			}
+		}
+		sb.append(BinaryStrings.toBinaryString(val));
+		return sb.toString();
+	}
+	private static String toBin(String label, String delim, long[] val) {
+		return toBin(label,delim,val,-1);
+	}
+	private static String toBin(String label, String delim, long[] val, int size) {
+		StringBuilder sb = new StringBuilder();
+		if(label!=null) {
+			sb.append(label);
+			if(delim!=null) {
+				sb.append(delim);
+			} else {
+				sb.append("\t");
+			}
+		}
+		sb.append(BinaryStrings.toBinaryString(val,size));
+		return sb.toString();
+	}
+	
 	/**
 	 * 
 	 * @param array the <code>long[]</code> of values to rotate 
@@ -155,4 +207,87 @@ public class LongArrayShift {
 		return value;
 	}
 	
+	public static long[] subBits(long[] bits,int startBit, int endExclusive) {
+		int merge=startBit^endExclusive;
+		startBit=Math.min(merge^startBit, merge^endExclusive);
+		endExclusive=merge^startBit;
+		int startIdx=getArrayIdxUsingBitIdx(startBit);
+		int endIdx=getArrayIdxUsingBitIdx(endExclusive);
+		int len=(endIdx-startIdx)+1;
+		long[] reso=new long[len];
+		System.arraycopy(bits, startIdx, reso, 0, len);
+		int reducedSize=endExclusive-startBit;
+		endExclusive=(endExclusive-startBit)&unit.limitMask();
+		startBit=startBit&unit.limitMask();
+		shiftLeft(reso,startBit);
+		reso[len-1]=reso[len-1]>>>(unit.bits()-endExclusive);
+		return reso;
+	}
+	
+	private static void shiftLeft(long[] bits,int amt) {
+		int size=unit.bits()*bits.length;
+		amt=normalizeCyclicI(amt,size);
+		long orMask = -1l<<(unit.bits()-amt);
+		int shiftAmt=amt;
+		int numberOfLastBits = size&unit.limitMask();
+		long lastMaskSize = Math.min(amt, numberOfLastBits);
+		long lastMaskShifts = (unit.bits()-lastMaskSize); 
+		long lastMask=-1l>>>lastMaskShifts;
+		int lastIdx=bits.length-1;
+		int lastIter=lastIdx-1;
+		for(int i=0;i<bits.length;i++) {
+			long current=bits[i];
+			current=current<<shiftAmt;
+			if(i<lastIdx) {
+			long orVal=(orMask&bits[i+1]);
+				current|=orVal;
+			}
+			bits[i]=current;
+		}
+	}
+	
+	private static int getArrayIdxUsingBitIdx(int bitIdx) {
+		return bitIdx>>>unit.multOrDivShift();
+	}
+	
+	private static List<String> getArraySubArrayComparisonStrings(long[] bits, int size, int subStart, int subEnd) {
+		List<String> strs=new ArrayList<String>(2);
+		strs.add(BinaryStrings.toBinaryString(bits, size, ""));
+		char[] spaces = new char[subStart];
+		Arrays.fill(spaces, ' ');
+		long[] subArray = subBits(bits, subStart, subEnd);
+		strs.add(new String(spaces)+BinaryStrings.toBinaryString(subArray,subEnd-subStart,""));
+		return strs;
+	}
+	
+	private static void printSubArrayComparison(long[] bits, int size, int subStart, int subEnd) {
+		List<String> strs = getArraySubArrayComparisonStrings(bits, size, subStart, subEnd);
+		System.out.println(String.join("\n", strs));
+	}
+	
+	public static void main(String[] args) {
+		int bitLen=233;
+		LongQuickBitArray lqba = LongQuickBitArray.createRandomArrayOfLength(bitLen);
+		System.out.println(lqba);
+		String asStr=BinaryStrings.toBinaryString(lqba.getBitArray(),lqba.getSize(),"");
+		asStr=asStr.substring(1,asStr.length()-1);
+		StringBuilder sb = new StringBuilder();
+		
+		System.out.println(BinaryStrings.toBinaryString(lqba.getBitArray(),lqba.getSize(),"").replace('1','█').replace('0', '_'));
+		int start=1;
+		int end=68;
+		long[] bits=lqba.getBitArray();
+		printSubArrayComparison(bits, bitLen, start, end);
+		
+		
+		
+//		System.out.println("-1:\t"+BinaryStrings.toBinaryString(lqba.getBitArray(),lqba.getSize()));
+//		int rotations=(bitLen*4)+12;
+//		for(int i=0;i<rotations;i++) {
+//			System.out.println(i+":\t"+BinaryStrings.toBinaryString(nonMutatingBitwiseRotate(lqba.getBitArray(), lqba.getSize(), i),lqba.getSize()));
+//		}
+		
+		
+		
+	}
 }

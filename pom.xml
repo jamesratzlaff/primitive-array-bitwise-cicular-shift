@@ -8,9 +8,21 @@
 	<groupId>com.jamesratzlaff</groupId>
 	<artifactId>primitive-array-bitwise-circular-shift</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
-  <properties>
+	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<maven.compiler.source>17</maven.compiler.source>
-		<maven.compiler.target>21</maven.compiler.target>
+		<maven.compiler.target>20</maven.compiler.target>
 	</properties>
+	<dependencies>
+		<dependency>
+			<groupId>org.openjdk.jmh</groupId>
+			<artifactId>jmh-core</artifactId>
+			<version>1.37</version>
+		</dependency>
+		<dependency>
+			<groupId>org.openjdk.jmh</groupId>
+			<artifactId>jmh-generator-annprocess</artifactId>
+			<version>1.37</version>
+		</dependency>
+	</dependencies>
 </project>
