@@ -355,14 +355,10 @@ public class LongQuickBitArray {
 			if (amount < 0) {
 				for (int i = 0; i < absAmt; i++) {
 					shiftLeft();
-					System.out.println(this);
-//					System.out.println(i+1+":\t"+BinaryStrings.toBinaryString(this.bits,this.size));
 				}
 			} else {
 				for (int i = 0; i < absAmt; i++) {
 					shiftRight();
-					System.out.println(BinaryStrings.toBinaryString(this.getBitArray(),this.getSize()));
-					System.out.println(this);
 				}
 				
 			}

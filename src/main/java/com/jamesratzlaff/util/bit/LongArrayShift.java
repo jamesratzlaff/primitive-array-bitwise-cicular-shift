@@ -213,11 +213,12 @@ public class LongArrayShift {
 				long orVal=bits[currentIndex];
 				orVal&=lastIndexCarryMask;
 				orVal<<=unit.bits()-numberOfLastIndexBits;
+				
 				if(currentIndex!=0) {
 					if(bleedOverMask!=0) {
 						long bleedOver=orVals[currentIndex-1];
 						bleedOver<<=numberOfShifts;
-						long bleedOverVal=bleedOverMask&bleedOverMask;
+						long bleedOverVal=bleedOverMask&bleedOver;
 						bleedOverVal>>>=numberOfLastIndexBits;
 						orVal|=bleedOverVal;
 						bleedOver&=~bleedOverMask;
@@ -248,7 +249,7 @@ public class LongArrayShift {
 		long[] orVals = getOrValsForLeftShift(bits, size, amt);
 		rotate(orVals, 1);
 		for(int i=0;i<bits.length;i++) {
-			bits[i]=(bits[i]<<amt|orVals[i]);
+			bits[i]=((bits[i]<<amt)|orVals[i]);
 		}
 		return bits;
 	}
@@ -513,17 +514,19 @@ public class LongArrayShift {
 		System.out.println(lqba);
 		System.out.println(BinaryStrings.toBinaryString(lqba.getBitArray(), lqba.getSize()));
 		LongQuickBitArray lqba2 = lqba.clone();
-		shiftLeft(lqba.getBitArray(), lqba.getSize(), 1);
+		shiftLeft(lqba.getBitArray(), lqba.getSize(), 0);
 		System.out.println(lqba);
-		shiftLeft(lqba.getBitArray(), lqba.getSize(), 1);
+		shiftLeft(lqba.getBitArray(), lqba.getSize(), 37);
 		System.out.println(lqba);
+		lqba2.shift(37);
+		System.out.println(lqba2);
 		shiftLeft(lqba.getBitArray(), lqba.getSize(), 1);
 		System.out.println(lqba);
 		shiftLeft(lqba.getBitArray(), lqba.getSize(), -1);
 		System.out.println(lqba);
 		shiftLeft(lqba.getBitArray(), lqba.getSize(), -1);
 		System.out.println(lqba);
-		shiftLeft(lqba.getBitArray(), lqba.getSize(), -1);
+		shiftLeft(lqba.getBitArray(), lqba.getSize(), 0);
 		System.out.println(lqba);
 //		getOrValsForLeftShift(lqba.getBitArray(), 63, lqba.getSize());
 //		LongQuickBitArray lbqa2 = lqba.clone();
