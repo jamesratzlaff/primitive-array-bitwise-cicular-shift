@@ -163,9 +163,7 @@ public class LongArrayShift {
 	}
 	
 	private static long[] shiftLeft(long[] bits, int size, int amt) {
-		if(amt==61) {
-			System.out.println("poof");
-		}
+		
 		amt = normalizeCyclicI(amt, size);
 		int unitShifts = amt >>> unit.multOrDivShift();
 		amt -= (unitShifts << unit.multOrDivShift());
