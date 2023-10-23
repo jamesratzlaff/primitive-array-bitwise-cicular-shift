@@ -112,7 +112,7 @@ public class LongArrayShift {
 
 	}
 
-	private static long[] getOrValsForLeftShift(long[] bits, int size, int amt) {
+	private static long[] getOrValsForRightShift(long[] bits, int size, int amt) {
 		int lastIndex = bits.length - 1;
 		int numberOfLastIndexBits = size & unit.limitMask();
 		long carryMask = ~(-1l >>> amt);
@@ -162,7 +162,7 @@ public class LongArrayShift {
 		if(unitShifts>0) {
 			rotateAndCollapseForRightShift(bits, size, unitShifts);
 		}
-		long[] orVals = getOrValsForLeftShift(bits, size, amt);
+		long[] orVals = getOrValsForRightShift(bits, size, amt);
 		rotate(orVals, 1);
 		for(int i=0;i<bits.length;i++) {
 			bits[i]=((bits[i]<<amt)|orVals[i]);
