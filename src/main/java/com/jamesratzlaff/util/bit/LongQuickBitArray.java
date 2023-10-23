@@ -85,7 +85,7 @@ public class LongQuickBitArray {
 	 * @param i bit to set
 	 */
 	public void set(int i) {
-		bits[(i >>> BITS_PER_UNIT_SHIFT)] |= (long)1 << ((long)i & BIT_SHIFT_UNIT_LIMIT_MASK);
+		bits[(i >>> BITS_PER_UNIT_SHIFT)] |= (long)1l << ((long)i & BIT_SHIFT_UNIT_LIMIT_MASK);
 	}
 	
 	public void unset(int i) {
@@ -345,20 +345,26 @@ public class LongQuickBitArray {
 	}
 	
 	/**
-	 * 
+	 * I have no clue why this does the opposite of what I expect...I figured it out, the binary representation is reversed I guess
 	 * @param amount if negative it shifts left, positive right...is cyclic
 	 */
 	public LongQuickBitArray shift(int amount) {
 		int absAmt = Math.abs(amount);
+//		System.out.println("0:\t"+BinaryStrings.toBinaryString(this.bits,this.size));
 		if (amount != 0) {
 			if (amount < 0) {
 				for (int i = 0; i < absAmt; i++) {
 					shiftLeft();
+					System.out.println(this);
+//					System.out.println(i+1+":\t"+BinaryStrings.toBinaryString(this.bits,this.size));
 				}
 			} else {
 				for (int i = 0; i < absAmt; i++) {
 					shiftRight();
+					System.out.println(BinaryStrings.toBinaryString(this.getBitArray(),this.getSize()));
+					System.out.println(this);
 				}
+				
 			}
 		}
 		return this;
@@ -408,10 +414,10 @@ public class LongQuickBitArray {
 		for(int i=1;i<this.size;i++) {
 			if(this.get(i)) {
 				clone.set(i-1);
-			}
+			} 
 		}
 		for(int i=0;i<clone.getBitArray().length;i++) {
-			this.getBitArray()[i]=clone.getBitArray()[i];
+			this.bits=clone.bits;
 		}
 		return this;
 	}
