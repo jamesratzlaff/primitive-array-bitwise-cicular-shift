@@ -25,14 +25,14 @@ public class LongArrayShift {
 
 	/**
 	 * 
-	 * @param bits an <code>int[]</code> that represents bits
+	 * @param bits an <code>long[]</code> that represents bits
 	 * @param size the number of <i>bit</i> this <code>int[]</code> represents
 	 * @param amt  the amount to rotate the bits, a positive value will rotate
 	 *             right, a negative value will rotate left
 	 * @return the passed in <code>bits</code> parameter with its bits rotated
 	 */
 	public static long[] bitwiseRotate(long[] bits, long size, long amt) {
-		return shiftLeft(bits, (int)size, (int)amt);
+		return shiftRight(bits, (int)size, (int)amt);
 	}
 
 	private static void printB(long val) {
@@ -81,10 +81,8 @@ public class LongArrayShift {
 	 * @param shiftUnits
 	 * @return
 	 */
-	private static long[] rotateAndCollapseForLeftShift(long[] bits, int size, int shiftUnits) {
+	private static long[] rotateAndCollapseForRightShift(long[] bits, int size, int shiftUnits) {
 		rotate(bits, shiftUnits);
-//		System.out.println("rotated:\t\t"+BinaryStrings.toBinaryString(bits,size));
-		// the last bit set to carry from should be bits.length-1;
 		int lastIndex = bits.length - 1;
 		int newLastBitsIndex = normalizeCyclicI(lastIndex + shiftUnits, bits.length);
 		int numberOfLastIndexBits = size & unit.limitMask();
@@ -93,7 +91,6 @@ public class LongArrayShift {
 		}
 		long lastIndexCarryMask = -1l << numberOfLastIndexBits;
 		int numberOfShifts = unit.bits() - numberOfLastIndexBits;
-		// should come out to be 9,9,4;
 		for (int i = 0; i < bits.length; i++) {
 			int currentIndex = normalizeCyclicI(newLastBitsIndex - i, bits.length);
 			int prevIndex = normalizeCyclicI(currentIndex - 1, bits.length);
@@ -101,18 +98,12 @@ public class LongArrayShift {
 				break;
 			}
 			long currentValue = bits[currentIndex];
-//			System.out.println("currentValue:\t\t"+BinaryStrings.toBinaryString(currentValue));
 			currentValue <<= numberOfShifts;
-//			System.out.println("currentValue:\t\t"+BinaryStrings.toBinaryString(currentValue));
 			long prevValue = bits[prevIndex];
-//			System.out.println("prevValue:\t\t"+BinaryStrings.toBinaryString(prevValue));
 			long orVal = prevValue & lastIndexCarryMask;
 			orVal >>>= numberOfLastIndexBits;
-//			System.out.println("orVal:\t\t\t"+BinaryStrings.toBinaryString(orVal));
 			long newPrevValueMask = ~(-1l << numberOfLastIndexBits);
-//			System.out.println("newPrevValueMask:\t"+BinaryStrings.toBinaryString(newPrevValueMask));
 			prevValue &= newPrevValueMask;
-//			System.out.println("prevValue:\t\t"+BinaryStrings.toBinaryString(prevValue));
 			currentValue |= orVal;
 			bits[currentIndex] = currentValue;
 			bits[prevIndex] = prevValue;
@@ -162,14 +153,14 @@ public class LongArrayShift {
 
 	}
 	
-	private static long[] shiftLeft(long[] bits, int size, int amt) {
+	private static long[] shiftRight(long[] bits, int size, int amt) {
 		
 		amt = normalizeCyclicI(amt, size);
 		int unitShifts = amt >>> unit.multOrDivShift();
 		amt -= (unitShifts << unit.multOrDivShift());
 		long lastBitsMask = ~(-1l<<(size&unit.limitMask()));
 		if(unitShifts>0) {
-			rotateAndCollapseForLeftShift(bits, size, unitShifts);
+			rotateAndCollapseForRightShift(bits, size, unitShifts);
 		}
 		long[] orVals = getOrValsForLeftShift(bits, size, amt);
 		rotate(orVals, 1);
@@ -181,41 +172,6 @@ public class LongArrayShift {
 	}
 	
 
-//	private static long[] getOrValsForLeftShift(long[] bits, long amt, int size) {
-//		long[] orVals = new long[bits.length];
-//		long lastIndexBits = size & unit.limitMask();
-//		long numberOfCarryBits = unit.bits() - amt;
-//		long carryMask = -1l << numberOfCarryBits;
-//		long lastCarryShifts = unit.bits() - lastIndexBits;
-//		for (int i = 0; i < bits.length; i++) {
-//			long currentVal = bits[i];
-//			long maskedVal = carryMask & bits[i];
-//			if (i == bits.length - 1) {
-//				currentVal <<= lastCarryShifts;
-//				System.out.println(BinaryStrings.toBinaryString(currentVal));
-//			}
-//		}
-//		return null;
-//
-//	}
-
-	private static String toBin(String label, String delim, long[] val) {
-		return toBin(label, delim, val, -1);
-	}
-
-	private static String toBin(String label, String delim, long[] val, int size) {
-		StringBuilder sb = new StringBuilder();
-		if (label != null) {
-			sb.append(label);
-			if (delim != null) {
-				sb.append(delim);
-			} else {
-				sb.append("\t");
-			}
-		}
-		sb.append(BinaryStrings.toBinaryString(val, size));
-		return sb.toString();
-	}
 
 	/**
 	 * 
