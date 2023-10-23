@@ -397,9 +397,9 @@ public class LongArrayShift {
 		for(int i=0;i<(bitLen*2)+1;i++) {
 			LongQuickBitArray lqba2 = lqba.clone();
 			LongQuickBitArray lqba3 = lqba.clone();
-			bitwiseRotate(lqba2.getBitArray(), lqba2.getSize(), i);
+			bitwiseRotate(lqba2.getBitArray(), lqba2.getSize(), -i);
 			System.out.println("lqba2("+i+"): "+lqba2);
-			lqba3.shift(i);
+			lqba3.shift(-i);
 			System.out.println("lqba3("+i+"): "+lqba3);
 			if(!lqba2.equals(lqba3)) {
 				System.err.println("mismatch at iteration "+i);
