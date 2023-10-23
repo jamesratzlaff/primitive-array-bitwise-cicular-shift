@@ -350,6 +350,7 @@ public class LongQuickBitArray {
 	 */
 	public LongQuickBitArray shift(int amount) {
 		int absAmt = Math.abs(amount);
+		absAmt=absAmt%this.size;
 //		System.out.println("0:\t"+BinaryStrings.toBinaryString(this.bits,this.size));
 		if (amount != 0) {
 			if (amount < 0) {

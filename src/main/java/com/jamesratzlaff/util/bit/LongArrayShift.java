@@ -113,6 +113,9 @@ public class LongArrayShift {
 	}
 
 	private static long[] getOrValsForRightShift(long[] bits, int size, int amt) {
+		if(amt==0) {
+			return new long[bits.length];
+		}
 		int lastIndex = bits.length - 1;
 		int numberOfLastIndexBits = size & unit.limitMask();
 		if(size!=0&&numberOfLastIndexBits==0) {
@@ -158,14 +161,16 @@ public class LongArrayShift {
 	
 	private static long[] shiftRight(long[] bits, int size, int amt) {
 		
+
 		amt = normalizeCyclicI(amt, size);
 		int unitShifts = amt >>> unit.multOrDivShift();
 		amt -= (unitShifts << unit.multOrDivShift());
+		unitShifts=unitShifts%bits.length;
 		int numberOfLastBits = size&unit.limitMask();
 		
 		long lastBitsMask = -1l>>>unit.bits()-numberOfLastBits;
 		
-		if(unitShifts>0) {
+		if(unitShifts!=0) {
 			rotateAndCollapseForRightShift(bits, size, unitShifts);
 		}
 		long[] orVals = getOrValsForRightShift(bits, size, amt);
