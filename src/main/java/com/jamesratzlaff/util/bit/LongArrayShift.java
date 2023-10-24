@@ -1,9 +1,5 @@
 package com.jamesratzlaff.util.bit;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-
 public class LongArrayShift {
 
 	private static final BitUnit unit = BitUnit.LONG;
@@ -33,25 +29,6 @@ public class LongArrayShift {
 	 */
 	public static long[] bitwiseRotate(long[] bits, long size, long amt) {
 		return shiftRight(bits, (int)size, (int)amt);
-	}
-
-	
-
-	private static String toBin(String label, String delim, long val) {
-		StringBuilder sb = new StringBuilder();
-		if (label != null) {
-			sb.append(label);
-			if (!label.endsWith(":")) {
-				sb.append(':');
-			}
-			if (delim != null) {
-				sb.append(delim);
-			} else {
-				sb.append("\t");
-			}
-		}
-		sb.append(BinaryStrings.toBinaryString(val));
-		return sb.toString();
 	}
 
 	/**
@@ -259,19 +236,6 @@ public class LongArrayShift {
 	}
 	
 
-
-
-	private static List<String> getArraySubArrayComparisonStrings(long[] bits, int size, int subStart, int subEnd) {
-		List<String> strs = new ArrayList<String>(2);
-		strs.add(BinaryStrings.toBinaryString(bits, size, ""));
-		char[] spaces = new char[subStart];
-		Arrays.fill(spaces, ' ');
-		long[] subArray = subBits(bits, subStart, subEnd);
-		strs.add(new String(spaces) + BinaryStrings.toBinaryString(subArray, subEnd - subStart, ""));
-		return strs;
-	}
-
-	
 	private static long[] getValues(long[] longs, int offset, int endOffset) {
 		int maxOffset = longs.length<<unit.multOrDivShift();
 		endOffset=Math.min(maxOffset, endOffset);
