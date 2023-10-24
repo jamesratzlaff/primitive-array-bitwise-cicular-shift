@@ -111,7 +111,15 @@ public class LongArrayShift {
 		return bits;
 
 	}
+	
 
+	/**
+	 * This actually operates more like getting the carries for left shifting btw
+	 * @param bits
+	 * @param size
+	 * @param amt
+	 * @return
+	 */
 	private static long[] getOrValsForRightShift(long[] bits, int size, int amt) {
 		if(amt==0) {
 			return new long[bits.length];
@@ -159,7 +167,59 @@ public class LongArrayShift {
 
 	}
 	
+	private static long[] getOrValsForLeftShift(long[] bits, int size, int amt) {
+		if(amt==0) {
+			return new long[bits.length];
+		}
+		int lastIndex = bits.length - 1;
+		int numberOfLastIndexBits = size & unit.limitMask();
+		if(size!=0&&numberOfLastIndexBits==0) {
+			numberOfLastIndexBits=unit.bits();
+		}
+		long carryMask = (1l << amt);
+		long lastIndexCarryMask = amt >= numberOfLastIndexBits ? ~(-1l << numberOfLastIndexBits)
+				: (1l << (numberOfLastIndexBits - amt));
+		long bleedOverMask = amt >= numberOfLastIndexBits ? (1l << (amt - numberOfLastIndexBits)) : 0;
+		int numberOfShifts = unit.bits()-amt;
+		long[] orVals = new long[bits.length];
+		for (int i = 0; i < bits.length; i++) {
+			int currentIndex = i;
+			if (currentIndex == lastIndex) {
+				long orVal=bits[currentIndex];
+				orVal&=lastIndexCarryMask;
+				orVal<<=unit.bits()-numberOfLastIndexBits;
+				
+				if(currentIndex!=0) {
+					if(bleedOverMask!=0) {
+						long bleedOver=orVals[currentIndex-1];
+						bleedOver<<=numberOfShifts;
+						long bleedOverVal=bleedOverMask&bleedOver;
+						bleedOverVal>>>=numberOfLastIndexBits;
+						orVal|=bleedOverVal;
+						bleedOver&=~bleedOverMask;
+						bleedOver>>>=numberOfShifts;
+						orVals[currentIndex-1]=bleedOver;
+					}
+				}
+				orVal >>>=numberOfShifts;
+				orVals[i]=orVal;
+			} else {
+				long currentValue = bits[currentIndex];
+				long orVal = currentValue & carryMask;
+				orVal >>>= numberOfShifts;
+				orVals[i] = orVal;
+			}
+		}
+		return orVals;
+
+	}
+
 	private static long[] shiftRight(long[] bits, int size, int amt) {
+		return shiftRight(bits, size, amt, false, false);
+	}
+
+	
+	private static long[] shiftRight(long[] bits, int size, int amt, boolean discardLeftCarry, boolean discardRightCarry) {
 		
 
 		amt = normalizeCyclicI(amt, size);
@@ -175,6 +235,12 @@ public class LongArrayShift {
 		}
 		long[] orVals = getOrValsForRightShift(bits, size, amt);
 		rotate(orVals, 1);
+		if(discardLeftCarry) {
+			orVals[0]=0;
+		}
+		if(discardRightCarry) {
+			orVals[orVals.length-1]=0;
+		}
 		for(int i=0;i<bits.length;i++) {
 			bits[i]=((bits[i]<<amt)|orVals[i]);
 		}
@@ -252,45 +318,11 @@ public class LongArrayShift {
 		int merge = startBit ^ endExclusive;
 		startBit = Math.min(merge ^ startBit, merge ^ endExclusive);
 		endExclusive = merge ^ startBit;
-		int startIdx = getArrayIdxUsingBitIdx(startBit);
-		int endIdx = getArrayIdxUsingBitIdx(endExclusive);
-		int len = (endIdx - startIdx) + 1;
-		long[] reso = new long[len];
-		System.arraycopy(bits, startIdx, reso, 0, len);
-		System.out.println(BinaryStrings.toBinaryString(reso));
-		int reducedSize = endExclusive - startBit;
-		endExclusive = reducedSize & unit.limitMask();
-		startBit = startBit & unit.limitMask();
-		long endMask = -1l>>>unit.bits()-endExclusive;
-//		reso[0]&=~(1<<startBit);
-//		reso[len - 1] &= endMask;
-		bitwiseRotate(reso, reso.length<<unit.multOrDivShift(), -startBit);
-		//TODO: snip off the right-most bits
-		
-		
-		System.out.println(BinaryStrings.toBinaryString(reso));
-		System.out.println(startBit);
-//		reso[len-1]<<=startBit;
-//		bitwiseRotate(reso,reso.length<<unit.multOrDivShift(),startBit);
-//		reso[len - 1] &= endMask;
-//		reso[len-1]<<=startBit;
-		System.out.println(BinaryStrings.toBinaryString(reso));
-		
-		
-		
-		System.out.println(BinaryStrings.toBinaryString(reso));
-		return reso;
+		return getValues(bits, startBit, endExclusive);
 	}
 	
 
 
-	private static void shiftLeft(long[] bits, int amt) {
-		bitwiseRotate(bits, bits.length<<unit.multOrDivShift(), amt);
-	}
-
-	private static int getArrayIdxUsingBitIdx(int bitIdx) {
-		return bitIdx >>> unit.multOrDivShift();
-	}
 
 	private static List<String> getArraySubArrayComparisonStrings(long[] bits, int size, int subStart, int subEnd) {
 		List<String> strs = new ArrayList<String>(2);
@@ -362,9 +394,100 @@ public class LongArrayShift {
 		}
 
 	}
+	
+	private static long[] getValues(long[] longs, int offset, int endOffset) {
+		int maxOffset = longs.length<<unit.multOrDivShift();
+		endOffset=Math.min(maxOffset, endOffset);
+		int totalBits=endOffset-offset;
+		int arrSize = (totalBits>>>unit.multOrDivShift())+((totalBits&unit.limitMask())>0?1:0);
+		arrSize=Math.min(longs.length, arrSize);
+		
+		long[] vals=new long[arrSize];
+		for(int i=0;i<arrSize;i++) {
+			int offsetToUse = offset+(i<<unit.multOrDivShift());
+			vals[i]=getValue(longs, offsetToUse);
+		}
+		int lastIndexSize = totalBits&unit.limitMask();
+		if(lastIndexSize!=0||lastIndexSize!=unit.bits()) {
+			long lastIndexMask = -1l>>>(unit.bits()-lastIndexSize);
+			vals[vals.length-1]&=lastIndexMask;
+		}
+		return vals;
+	}
+	
+	
+	/**
+	 * 
+	 * @param longs
+	 * @param amount the amount of '0' bits that should be prepended to the first value in this array 
+	 * @return
+	 */
+	private static long[] offset(long[] longs, int amount) {
+		int numberOfZerosInLastElement=Long.numberOfLeadingZeros(longs[longs.length-1]);
+		int wholeUnits=amount>>unit.multOrDivShift();
+		amount-=wholeUnits<<unit.multOrDivShift();
+		int amountAndZeroDiff=amount-numberOfZerosInLastElement;
+		int expand = amountAndZeroDiff>0?1:0;
+		int orValSize = (longs.length-1)+expand;
+		long[] orVals=new long[orValSize];
+		long orMask=~(-1l>>>amount);
+		int lastOrShift=amount;
+		long lastOrMask=orMask;
+		long[] result=longs;
+		if(orValSize==longs.length) {
+			result=new long[orValSize+1];
+			System.arraycopy(longs, 0, result, 0, longs.length);
+		}
+		if(amountAndZeroDiff>0) {
+			lastOrShift=amountAndZeroDiff;
+		}
+		for(int i=0;i<orValSize;i++) {
+			int shift=(unit.bits()-amount); 
+			long current=longs[i];
+			long orVal = current&orMask;
+			orVal>>>=shift;
+			orVals[i]=orVal;
+		}
+	
+		for(int i=0;i<longs.length;i++) {
+			int shift=amount;
+			long orVal=0;
+			int orValIdx=i-1;
+			if(orValIdx>-1&&orValIdx<orVals.length) {
+				orVal=orVals[i-1];
+			}
+			result[i]<<=shift;
+			result[i]|=orVal;
+		}
+		if(longs.length<result.length) {
+			result[result.length-1]=orVals[orVals.length-1];
+		}
+		return result;
+	}
+	
+	private static long getValue(long[] longs, int offset) {
+		int idx = offset>>>unit.multOrDivShift();
+		int endIdx = (offset+unit.bits())>>>unit.multOrDivShift();
+		int endOffset=(offset+unit.bits())&unit.limitMask();
+		if(idx==endIdx&&endOffset==0) {
+			endOffset=unit.bits()-1;
+		}
+		long lowerMaskSize=offset&unit.limitMask();
+		if(lowerMaskSize==0) {
+			lowerMaskSize=unit.bits();
+		}
+	
+		long lowerMask=(-1l<<lowerMaskSize);
+		long upperMask=-1l>>>(unit.bits()-endOffset);//BinaryStrings.toBinaryString(lowerMask,upperMask)
+		long value = (longs[idx]&lowerMask)>>>(lowerMaskSize);
+		if(Long.numberOfTrailingZeros(lowerMask)!=0&&endIdx<longs.length) {
+			value|=(longs[endIdx]&upperMask)<<(unit.bits()-endOffset);
+		}
+		return value;
+	}
 
 	public static void main(String[] args) {
-		int bitLen = 128 + 3;
+		int bitLen = 128 + 19;
 		LongQuickBitArray lqba = new LongQuickBitArray(bitLen);// LongQuickBitArray.createRandomArrayOfLength(bitLen);
 		LongQuickBitArray rando = LongQuickBitArray.createRandomArrayOfLength(bitLen);
 		System.out.println(rando);
@@ -377,10 +500,18 @@ public class LongArrayShift {
 		rando.set(128);
 		rando.set(129);
 		rando.set(130);
+		rando.set(148);
+		System.out.println(BinaryStrings.toBinaryString(rando.getBitArray()));
+		long[] sub = getValues(rando.getBitArray(), 3, 149);
+		System.out.println(BinaryStrings.toBinaryString(sub));
+		System.out.println(BinaryStrings.toBinaryString(offset(sub,63)));
+		System.out.println(rando);
+		
+		System.out.println(rando);
 		long[] subs = subBits(rando.getBitArray(), 1, 68);
 		LongQuickBitArray subArray = new LongQuickBitArray(subs, 67);
 		System.out.println(subArray);
-		System.out.println(BinaryStrings.toBinaryString(subs));
+//		System.out.println(BinaryStrings.toBinaryString(subs));
 
 
 	}

@@ -91,7 +91,12 @@ public class BinaryStrings {
 		return strs;
 
 	}
-
+	public static String toBinaryString(long value, long...values) {
+		long[] all = new long[values.length+1];
+		all[0]=value;
+		System.arraycopy(values, 0, all, 1, values.length);
+		return toBinaryString(all);
+	}
 	public static String toBinaryString(long value) {
 		return toBinaryString(value, BitUnit.LONG.bits());
 	}
