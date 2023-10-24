@@ -34,8 +34,13 @@ public class LongArrayShift {
 	}
 	
 	public static long[] bitwiseRotateInnerBits(long[] bits, long size, int innerOffset, int innerEndOffsetExcl, long amt) {
-		long[] subBits = getOffsetSubBits(bits, innerOffset, innerEndOffsetExcl);
-		//TODO: make sure offsetSubBits have correct leftPadding
+		long[] subBits = subBits(bits, innerOffset, innerEndOffsetExcl);
+		long[] XORSubbits = offset(subBits, innerEndOffsetExcl);
+		//do shifting
+		bitwiseRotate(XORSubbits, innerEndOffsetExcl-innerOffset, amt);
+		//doXORING
+		//TODO: make sure offsetSubBits have correct leftPadding and add XORing function(s)
+		return bits;
 	}
 	
 	public static long[] bitwiseRotateInlined(long[] bits, long size, long amt) {
@@ -426,7 +431,7 @@ public class LongArrayShift {
 	 * @param longs
 	 * @param amount the amount of '0' bits that should be prepended to the first
 	 *               value in this array
-	 * @return
+	 * @return a copy of <code>longs</code> with padding (should not modify passed in instance)
 	 */
 	private static long[] offset(long[] longs, int amount) {
 		int numberOfZerosInLastElement = Long.numberOfLeadingZeros(longs[longs.length - 1]);
@@ -438,7 +443,7 @@ public class LongArrayShift {
 		long[] orVals = new long[orValSize];
 		long orMask = ~(-1l >>> amount);
 
-		long[] result = longs;
+		long[] result = longs.clone();
 		if (orValSize == longs.length) {
 			result = new long[orValSize + 1];
 			System.arraycopy(longs, 0, result, 0, longs.length);
