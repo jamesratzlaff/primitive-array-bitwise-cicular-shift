@@ -16,8 +16,7 @@ public class LongArrayShift {
 	 *         bits rotated
 	 */
 	public static long[] nonMutatingBitwiseRotate(long[] bits, long size, long amt) {
-		long[] copy = new long[bits.length];
-		System.arraycopy(bits, 0, copy, 0, bits.length);
+		long[] copy = bits.clone();
 		return bitwiseRotate(copy, size, amt);
 	}
 
@@ -32,22 +31,44 @@ public class LongArrayShift {
 	public static long[] bitwiseRotate(long[] bits, long size, long amt) {
 		return shiftRight(bits, (int) size, (int) amt);
 	}
-	
-	public static long[] bitwiseRotateInnerBits(long[] bits, long size, int innerOffset, int innerEndOffsetExcl, long amt) {
+	public static long[] nonMutatingBitwiseRotateInnerBits(long[] bits, long size, long amt, int innerOffset, int innerEndOffsetExcl) {
+		long[] clone=bits.clone();
+		return bitwiseRotateInnerBits(clone, size, amt, innerOffset, innerEndOffsetExcl);
+	}
+	public static long[] bitwiseRotateInnerBits(long[] bits, long size, long amt, int innerOffset, int innerEndOffsetExcl) {
 		long[] subBits = subBits(bits, innerOffset, innerEndOffsetExcl);
-		long[] XORSubbits = offset(subBits, innerEndOffsetExcl);
-		//do shifting
-		bitwiseRotate(XORSubbits, innerEndOffsetExcl-innerOffset, amt);
-		//doXORING
-		//TODO: make sure offsetSubBits have correct leftPadding and add XORing function(s)
+		long[] XORSubbits = offset(subBits, innerOffset);
+		bitwiseRotate(subBits, innerEndOffsetExcl-innerOffset, amt);
+		subBits=offset(subBits, innerOffset);
+		nonCyclicXor(bits, XORSubbits);
+		nonCyclicOr(bits, subBits);
 		return bits;
 	}
+	private static void nonCyclicOr(long[] toOr, long[] orer) {
+		int endIdx=Math.min(toOr.length, orer.length);
+		for(int i=0;i<endIdx;i++) {
+			toOr[i]|=orer[i];
+		}
+	}
+	private static void nonCyclicXor(long[] toXor, long[] xorer) {
+		int endIdx=Math.min(toXor.length, xorer.length);
+		for(int i=0;i<endIdx;i++) {
+			toXor[i]^=xorer[i];
+		}
+	}
+
 	
 	public static long[] bitwiseRotateInlined(long[] bits, long size, long amt) {
 		return shiftRightInlined(bits, (int) size, (int) amt);
 	}
 
-
+	public static long[] bitwiseRotateUsingSubArrays(long[] bits, long size, long amt) {
+		amt=normalizeCyclic(amt, size);
+		long[] endOfResult =  offset(subBits(bits, 0, (int)amt),(int)(size-amt));
+		long[] beginningOfResult = subBits(bits, (int)amt, (int)size);
+		nonCyclicOr(endOfResult, beginningOfResult);
+		return endOfResult;
+	}
 
 	/**
 	 * rotates the integral representation of bits by the amount of given shift
@@ -442,15 +463,20 @@ public class LongArrayShift {
 		int orValSize = (longs.length - 1) + expand;
 		long[] orVals = new long[orValSize];
 		long orMask = ~(-1l >>> amount);
-
-		long[] result = longs.clone();
-		if (orValSize == longs.length) {
-			result = new long[orValSize + 1];
-			System.arraycopy(longs, 0, result, 0, longs.length);
-		}
+		
+		int shiftAmt=unit.bits()-amount;
+		
+		long[] result = new long[longs.length+wholeUnits+expand];
+		System.arraycopy(longs, 0, result, wholeUnits, longs.length);
+		
+//		longs.clone();
+//		if (orValSize == longs.length) {
+//			result = new long[orValSize + 1];
+//			System.arraycopy(longs, 0, result, 0, longs.length);
+//		}
 
 		for (int i = 0; i < orValSize; i++) {
-			int shift = (unit.bits() - amount);
+			int shift = shiftAmt;
 			long current = longs[i];
 			long orVal = current & orMask;
 			orVal >>>= shift;
@@ -462,12 +488,13 @@ public class LongArrayShift {
 			long orVal = 0;
 			int orValIdx = i - 1;
 			if (orValIdx > -1 && orValIdx < orVals.length) {
-				orVal = orVals[i - 1];
+				orVal = orVals[orValIdx];
 			}
-			result[i] <<= shift;
-			result[i] |= orVal;
+			int resultIdx=i+wholeUnits;
+			result[resultIdx] <<= shift;
+			result[resultIdx] |= orVal;
 		}
-		if (longs.length < result.length) {
+		if (expand==1) {
 			result[result.length - 1] = orVals[orVals.length - 1];
 		}
 		return result;
@@ -509,16 +536,19 @@ public class LongArrayShift {
 		rando.set(129);
 		rando.set(130);
 		rando.set(148);
-		System.out.println(BinaryStrings.toBinaryString(rando.getBitArray()));
-		long[] sub = getValues(rando.getBitArray(), 3, 149);
-		System.out.println(BinaryStrings.toBinaryString(sub));
-		System.out.println(BinaryStrings.toBinaryString(offset(sub, 63)));
-		System.out.println(rando);
-
-		System.out.println(rando);
-		long[] subs = getOffsetSubBits(rando.getBitArray(), 1, 68);
-		LongQuickBitArray subArray = new LongQuickBitArray(subs, 67);
-		System.out.println(subArray);
+		LongQuickBitArray randoClone = rando.clone();
+		
+//		System.out.println(BinaryStrings.toBinaryString(rando.getBitArray()));
+//		long[] sub = getValues(rando.getBitArray(), 3, 149);
+//		System.out.println(BinaryStrings.toBinaryString(sub));
+//		System.out.println(BinaryStrings.toBinaryString(offset(sub, 63)));
+//		System.out.println(rando);
+//
+//		System.out.println(rando);
+//		int expandOffset=65;
+//		int expandEnd=65+65;
+//		bitwiseRotateInnerBits(rando.getBitArray(), rando.getSize(), 1, expandOffset, expandEnd);
+//		System.out.println(rando);
 //		System.out.println(BinaryStrings.toBinaryString(subs));
 
 	}
