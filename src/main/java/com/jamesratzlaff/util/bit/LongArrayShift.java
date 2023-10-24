@@ -35,25 +35,7 @@ public class LongArrayShift {
 		return shiftRight(bits, (int)size, (int)amt);
 	}
 
-	private static void printB(long val) {
-		System.out.println(toBin(val));
-	}
-
-	private static String toBin(long val) {
-		return toBin(null, null, val);
-	}
-
-	private static void printB(String label, long val) {
-		System.out.println(toBin(label, val));
-	}
-
-	private static String toBin(String label, long val) {
-		return toBin(label, null, val);
-	}
-
-	private static void printB(String label, String delim, long val) {
-		System.out.println(toBin(label, delim, val));
-	}
+	
 
 	private static String toBin(String label, String delim, long val) {
 		StringBuilder sb = new StringBuilder();
@@ -167,52 +149,7 @@ public class LongArrayShift {
 
 	}
 	
-	private static long[] getOrValsForLeftShift(long[] bits, int size, int amt) {
-		if(amt==0) {
-			return new long[bits.length];
-		}
-		int lastIndex = bits.length - 1;
-		int numberOfLastIndexBits = size & unit.limitMask();
-		if(size!=0&&numberOfLastIndexBits==0) {
-			numberOfLastIndexBits=unit.bits();
-		}
-		long carryMask = (1l << amt);
-		long lastIndexCarryMask = amt >= numberOfLastIndexBits ? ~(-1l << numberOfLastIndexBits)
-				: (1l << (numberOfLastIndexBits - amt));
-		long bleedOverMask = amt >= numberOfLastIndexBits ? (1l << (amt - numberOfLastIndexBits)) : 0;
-		int numberOfShifts = unit.bits()-amt;
-		long[] orVals = new long[bits.length];
-		for (int i = 0; i < bits.length; i++) {
-			int currentIndex = i;
-			if (currentIndex == lastIndex) {
-				long orVal=bits[currentIndex];
-				orVal&=lastIndexCarryMask;
-				orVal<<=unit.bits()-numberOfLastIndexBits;
-				
-				if(currentIndex!=0) {
-					if(bleedOverMask!=0) {
-						long bleedOver=orVals[currentIndex-1];
-						bleedOver<<=numberOfShifts;
-						long bleedOverVal=bleedOverMask&bleedOver;
-						bleedOverVal>>>=numberOfLastIndexBits;
-						orVal|=bleedOverVal;
-						bleedOver&=~bleedOverMask;
-						bleedOver>>>=numberOfShifts;
-						orVals[currentIndex-1]=bleedOver;
-					}
-				}
-				orVal >>>=numberOfShifts;
-				orVals[i]=orVal;
-			} else {
-				long currentValue = bits[currentIndex];
-				long orVal = currentValue & carryMask;
-				orVal >>>= numberOfShifts;
-				orVals[i] = orVal;
-			}
-		}
-		return orVals;
 
-	}
 
 	private static long[] shiftRight(long[] bits, int size, int amt) {
 		return shiftRight(bits, size, amt, false, false);
@@ -334,66 +271,6 @@ public class LongArrayShift {
 		return strs;
 	}
 
-	private static void printSubArrayComparison(long[] bits, int size, int subStart, int subEnd) {
-		List<String> strs = getArraySubArrayComparisonStrings(bits, size, subStart, subEnd);
-		System.out.println(String.join("\n", strs));
-	}
-
-	private static void shiftUnitsRightAndRejoin(long[] bits, int size, int unitShifts) {
-		System.out.println("bits:\t\t" + BinaryStrings.toBinaryString(bits));
-		rotate(bits, unitShifts);
-		System.out.println("bits:\t\t" + BinaryStrings.toBinaryString(bits));
-		int lastSegmentIndex = bits.length - 1;
-		System.out.println("lastSegmentIndex:\t\t" + lastSegmentIndex);
-		long lastIndexBits = size & unit.limitMask();
-		System.out.println("lastIndexBits:\t\t" + BinaryStrings.toBinaryString(lastIndexBits));
-
-		long shiftedLastSegmentIndex = normalizeCyclic(unitShifts + lastSegmentIndex, bits.length);
-		System.out.println("shiftedLastSegmentIndex:\t" + shiftedLastSegmentIndex);
-		long prevIdxGrabMask = -1l << lastIndexBits;
-		System.out.println("prevIdxGrabMask:\t\t" + BinaryStrings.toBinaryString(prevIdxGrabMask));
-		for (long i = 0; i < bits.length - 1; i++) {
-			System.out.println("===========START========");
-			int currentIndex = normalizeCyclicI(shiftedLastSegmentIndex - i, bits.length);
-			if (currentIndex == bits.length - 1) {
-				break;
-			}
-			System.out.println("currentIndex\t\t" + currentIndex);
-			int nextIndex = normalizeCyclicI(currentIndex - 1, bits.length);
-			System.out.println("nextIndex\t\t" + nextIndex);
-
-//			if(currentIndex==bits.length-1) {
-//				break;
-//			}
-
-			long currentIndexValue = bits[currentIndex];
-			System.out.println("currentValue\t\t" + BinaryStrings.toBinaryString(currentIndexValue));
-			long newCurrentIndexValue = currentIndexValue << (unit.bits() - lastIndexBits);
-			System.out.println("leftShift: " + (currentIndexValue << (unit.bits() - lastIndexBits)));
-			System.out.println("newCurrentIndexValue\t" + BinaryStrings.toBinaryString(newCurrentIndexValue));
-
-			bits[currentIndex] = newCurrentIndexValue;
-			long orVal = bits[nextIndex];
-			System.out.println("orVal\t\t\t" + BinaryStrings.toBinaryString(orVal));
-			orVal &= prevIdxGrabMask;
-			System.out.println("orVal&prevIdGrabMask\t" + BinaryStrings.toBinaryString(orVal));
-			orVal = orVal >>> lastIndexBits;
-			System.out.println("orVal>>>lastIndexBits\t" + BinaryStrings.toBinaryString(orVal));
-			System.out.println("bits[currentIndex]\t" + BinaryStrings.toBinaryString(bits[currentIndex]));
-			bits[currentIndex] |= orVal;
-			System.out.println("bits[currentIndex]\t" + BinaryStrings.toBinaryString(bits[currentIndex]));
-//			if (nextIndex != shiftedLastSegmentIndex) {
-			long nextIndexBits = bits[nextIndex];
-			System.out.println("nextIndexBits\t\t" + BinaryStrings.toBinaryString(nextIndexBits));
-			bits[nextIndex] &= ~prevIdxGrabMask;
-			nextIndexBits = bits[nextIndex];
-			System.out.println("nextIndexBits\t\t" + BinaryStrings.toBinaryString(nextIndexBits));
-//			}
-			System.out.println("===========END========");
-
-		}
-
-	}
 	
 	private static long[] getValues(long[] longs, int offset, int endOffset) {
 		int maxOffset = longs.length<<unit.multOrDivShift();
@@ -431,16 +308,13 @@ public class LongArrayShift {
 		int orValSize = (longs.length-1)+expand;
 		long[] orVals=new long[orValSize];
 		long orMask=~(-1l>>>amount);
-		int lastOrShift=amount;
-		long lastOrMask=orMask;
+
 		long[] result=longs;
 		if(orValSize==longs.length) {
 			result=new long[orValSize+1];
 			System.arraycopy(longs, 0, result, 0, longs.length);
 		}
-		if(amountAndZeroDiff>0) {
-			lastOrShift=amountAndZeroDiff;
-		}
+
 		for(int i=0;i<orValSize;i++) {
 			int shift=(unit.bits()-amount); 
 			long current=longs[i];
