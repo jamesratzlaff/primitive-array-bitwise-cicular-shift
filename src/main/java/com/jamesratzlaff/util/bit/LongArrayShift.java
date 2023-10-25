@@ -1,6 +1,10 @@
 package com.jamesratzlaff.util.bit;
 
-import java.util.stream.IntStream;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+
+import jdk.incubator.vector.LongVector;
 
 public class LongArrayShift {
 
@@ -21,6 +25,7 @@ public class LongArrayShift {
 	}
 
 	/**
+	 * for some reason negative amounts take ~2.5 longer than postitive amounts
 	 * 
 	 * @param bits an <code>long[]</code> that represents bits
 	 * @param size the number of <i>bit</i> this <code>int[]</code> represents
@@ -31,43 +36,68 @@ public class LongArrayShift {
 	public static long[] bitwiseRotate(long[] bits, long size, long amt) {
 		return shiftRight(bits, (int) size, (int) amt);
 	}
-	public static long[] nonMutatingBitwiseRotateInnerBits(long[] bits, long size, long amt, int innerOffset, int innerEndOffsetExcl) {
-		long[] clone=bits.clone();
+
+	public static long[] bitwiseRotateVec(long[] bits, long size, long amt) {
+		return shiftRightVec(bits, (int) size, (int) amt);
+	}
+
+	public static long[] nonMutatingBitwiseRotateInnerBits(long[] bits, long size, long amt, int innerOffset,
+			int innerEndOffsetExcl) {
+		long[] clone = bits.clone();
 		return bitwiseRotateInnerBits(clone, size, amt, innerOffset, innerEndOffsetExcl);
 	}
-	public static long[] bitwiseRotateInnerBits(long[] bits, long size, long amt, int innerOffset, int innerEndOffsetExcl) {
+
+	public static long[] bitwiseRotateInnerBits(long[] bits, long size, long amt, int innerOffset,
+			int innerEndOffsetExcl) {
 		long[] subBits = subBits(bits, innerOffset, innerEndOffsetExcl);
 		long[] XORSubbits = offset(subBits, innerOffset);
-		bitwiseRotate(subBits, innerEndOffsetExcl-innerOffset, amt);
-		subBits=offset(subBits, innerOffset);
+		bitwiseRotate(subBits, innerEndOffsetExcl - innerOffset, amt);
+		subBits = offset(subBits, innerOffset);
 		nonCyclicXor(bits, XORSubbits);
 		nonCyclicOr(bits, subBits);
 		return bits;
 	}
+
 	private static void nonCyclicOr(long[] toOr, long[] orer) {
-		int endIdx=Math.min(toOr.length, orer.length);
-		for(int i=0;i<endIdx;i++) {
-			toOr[i]|=orer[i];
-		}
-	}
-	private static void nonCyclicXor(long[] toXor, long[] xorer) {
-		int endIdx=Math.min(toXor.length, xorer.length);
-		for(int i=0;i<endIdx;i++) {
-			toXor[i]^=xorer[i];
+		int endIdx = Math.min(toOr.length, orer.length);
+		for (int i = 0; i < endIdx; i++) {
+			toOr[i] |= orer[i];
 		}
 	}
 
-	
+	private static void nonCyclicXor(long[] toXor, long[] xorer) {
+		int endIdx = Math.min(toXor.length, xorer.length);
+		for (int i = 0; i < endIdx; i++) {
+			toXor[i] ^= xorer[i];
+		}
+	}
+
 	public static long[] bitwiseRotateInlined(long[] bits, long size, long amt) {
 		return shiftRightInlined(bits, (int) size, (int) amt);
 	}
 
+	/**
+	 * For some reason this is much faster with negative amounts than positive
+	 * amounts. This is also faster with negative amounts compared to
+	 * {{@link #bitwiseRotate(long[], long, long)}
+	 * 
+	 * @param bits
+	 * @param size
+	 * @param amt
+	 * @return
+	 */
 	public static long[] bitwiseRotateUsingSubArrays(long[] bits, long size, long amt) {
-		amt=normalizeCyclic(amt, size);
-		long[] endOfResult =  offset(subBits(bits, 0, (int)amt),(int)(size-amt));
-		long[] beginningOfResult = subBits(bits, (int)amt, (int)size);
+		amt = -amt;
+		amt = normalizeCyclic(amt, size);
+		if (amt == 0) {
+			return bits;
+		}
+		long[] endOfResultSubBits = subBits(bits, 0, (int) amt);
+		long[] endOfResult = offset(endOfResultSubBits, (int) (size - amt));
+		long[] beginningOfResult = subBits(bits, (int) amt, (int) size);
 		nonCyclicOr(endOfResult, beginningOfResult);
-		return endOfResult;
+		System.arraycopy(endOfResult, 0, bits, 0, endOfResult.length);
+		return bits;
 	}
 
 	/**
@@ -130,11 +160,12 @@ public class LongArrayShift {
 	 * @param shiftUnits
 	 * @return
 	 */
-	private static long[] rotateAndCollapseForRightShift(long[] bits, int size, int shiftUnits) {
+	public static long[] rotateAndCollapseForRightShift(long[] bits, int size, int shiftUnits) {
 		rotate(bits, shiftUnits);
 		int lastIndex = bits.length - 1;
 		int newLastBitsIndex = normalizeCyclicI(lastIndex + shiftUnits, bits.length);
 		int numberOfLastIndexBits = size & unit.limitMask();
+
 		if (numberOfLastIndexBits == 0) {
 			return bits;
 		}
@@ -161,7 +192,7 @@ public class LongArrayShift {
 
 	}
 
-	private static long[] rotateAndCollapseForLeftShift(long[] bits, int size, int shiftUnits) {
+	public static long[] rotateAndCollapseForLeftShift(long[] bits, int size, int shiftUnits) {
 		rotate(bits, -shiftUnits);
 		int lastIndex = bits.length - 1;
 		int newLastBitsIndex = normalizeCyclicI(lastIndex - shiftUnits, bits.length);
@@ -192,6 +223,218 @@ public class LongArrayShift {
 
 	}
 
+//	private static long[] getLowerXBitsInEach(long[] bits, int size, int numberOfBits) {
+//		int numberOfLastBits = size & unit.limitMask();
+//		long lastBitsMask = getLowerXBitsMask(min(numberOfBits, numberOfLastBits));
+//		long mask = getLowerXBitsMask(numberOfBits);
+//		long[] lowerBits = new long[bits.length];
+//		for (int i = 0; i < bits.length - 1; i++) {
+//			lowerBits[i] = bits[i] & mask;
+//		}
+//		lowerBits[lowerBits.length - 1] = bits[bits.length - 1] & lastBitsMask;
+//		int lastNeedsMoreBits = (int) aLTb(numberOfLastBits, numberOfBits);
+//		switch (lastNeedsMoreBits) {
+//		case 1: {
+//			int bitsNeeded = numberOfBits - numberOfLastBits;
+//			mask = getUpperXBitsMask(bitsNeeded);
+//			int idx = normalizeCyclicI(bits.length - 2, bits.length);
+//			lowerBits[lowerBits.length - 1] = (lowerBits[lowerBits.length - 1] << bitsNeeded)
+//					| (mask & bits[idx] >>> unit.bits() - bitsNeeded);
+//			return lowerBits;
+//		}
+//		default:
+//			return lowerBits;
+//		}
+//
+//	}
+	private static long[] getUpperXBitsInEach(long[] bits, int size, int numberOfBits) {
+		return getUpperXBitsInEach(bits, size, numberOfBits, bits.length - 1);
+	}
+
+	// TODO: consider adding a param that specifies where the last bits index is,
+	// this way carries will work in concert with unit shifts
+	private static long[] getUpperXBitsInEach(long[] bits, int size, int numberOfBits, int lastIndex) {
+		int numberOfLastBits = size & unit.limitMask();
+		int lastNeedsMoreBits = (int) aLTb(numberOfLastBits, numberOfBits);
+		long lastBitsMask = -1l >>> unit.bits() - numberOfLastBits;
+		int shift = unit.bits() - numberOfBits;
+		int bitsNeeded = numberOfBits - numberOfLastBits;
+		int lastShift = 0;
+		switch (lastNeedsMoreBits) {
+		case 1:
+			break;
+		default:
+			lastShift = bitsNeeded;
+			lastBitsMask <<= (bitsNeeded);
+		}
+		long mask = getUpperXBitsMask(numberOfBits);
+		long[] upperBits = new long[bits.length];
+		int lastBitIdx = bits.length - 1;
+		int startIndex = lastIndex + 1;
+		for (int i = 0; i < lastBitIdx; i++) {
+			int normalizedIndex = normalizeCyclicI(startIndex + i, bits.length);
+			upperBits[normalizedIndex] = (bits[normalizedIndex] & mask) >>> shift;
+		}
+		upperBits[lastIndex] = (bits[lastIndex] & lastBitsMask) >>> lastShift;
+
+		switch (lastNeedsMoreBits) {
+		case 1: {
+			int iterations = startIndex;
+			for (int i = 0; i < iterations; i++) {
+				int currentIndex = normalizeCyclicI(lastIndex - i, upperBits.length);
+				int idx = normalizeCyclicI(currentIndex - 1, upperBits.length);
+				mask = getLowerXBitsMask(bitsNeeded) << numberOfLastBits;
+				upperBits[currentIndex] = (upperBits[currentIndex] << bitsNeeded)
+						| ((mask & (upperBits[idx])) >>> (numberOfLastBits));
+				upperBits[idx] &= ~(mask);
+			}
+		}
+		default:
+			return upperBits;
+		}
+
+	}
+
+	public static long[] bitwiseRotateNew(long[] bits, int size, int amt) {
+		int isNeg = aLTbI(amt, 0);
+		switch (isNeg) {
+		case 1:
+			return shiftRightNew(bits, size, -amt);
+		default:
+			return shiftLeftNew(bits, size, amt);
+		}
+	}
+
+	private static long[] shiftRightNew(long[] bits, int size, int amt) {
+		amt = normalizeCyclicI(amt, size);
+		long shiftUnits = amt >>> unit.multOrDivShift();
+		amt -= (shiftUnits << unit.multOrDivShift());
+		rotate(bits, (int) -shiftUnits);
+		int lastIndex = normalizeCyclicI(shiftUnits, bits.length);
+		long[] ors = getLowerXBitsInEach(bits, size, amt, lastIndex);
+		rotate(ors, (int) -shiftUnits);
+		for (int i = 0; i < bits.length; i++) {
+			bits[i] = (bits[i] >>> amt) | ors[i];
+		}
+		return bits;
+
+	}
+
+	private static long[] shiftLeftNew(long[] bits, int size, int amt) {
+		amt = normalizeCyclicI(amt, size);
+		long shiftUnits = amt >>> unit.multOrDivShift();
+		amt -= shiftUnits;
+		rotate(bits, (int) shiftUnits);
+		int lastIndex = normalizeCyclicI(shiftUnits, bits.length);
+		long[] ors = getUpperXBitsInEach(bits, size, amt, lastIndex);
+		rotate(ors, (int) shiftUnits);
+		for (int i = 0; i < bits.length; i++) {
+			bits[i] = (bits[i] << amt) | ors[i];
+		}
+		return bits;
+
+	}
+
+	private static long[] getLowerXBitsInEach(long[] bits, int size, int numberOfBits) {
+		return getLowerXBitsInEach(bits, size, numberOfBits, bits.length - 1);
+	}
+
+	private static long[] getLowerXBitsInEach(long[] bits, int size, int numberOfBits, int lastIndex) {
+		int numberOfLastBits = size & unit.limitMask();
+		int lastNeedsMoreBits = (int) aLTb(numberOfLastBits, numberOfBits);
+		long lastBitsMask = -1l >>> unit.bits() - numberOfLastBits;
+		int shift = unit.bits() - numberOfBits;
+		int bitsNeeded = numberOfBits - numberOfLastBits;
+		int lastShift = 0;
+		switch (lastNeedsMoreBits) {
+		case 1:
+			break;
+		default:
+			lastShift = bitsNeeded;
+			lastBitsMask >>= (bitsNeeded);
+		}
+		long mask = getLowerXBitsMask(numberOfBits);
+		long[] lowerBits = new long[bits.length];
+		int lastBitIdx = bits.length - 1;
+		int startIndex = lastIndex + 1;
+		for (int i = 0; i < lastBitIdx; i++) {
+			int normalizedIndex = normalizeCyclicI(startIndex + i, bits.length);
+			lowerBits[normalizedIndex] = (bits[normalizedIndex] & mask) << shift;
+		}
+		lowerBits[lastIndex] = (bits[lastIndex] & lastBitsMask) << lastShift;
+
+		switch (lastNeedsMoreBits) {
+		case 1: {
+			int iterations = bits.length - lastIndex;
+			for (int i = 0; i < iterations; i++) {
+				int currentIndex = normalizeCyclicI(lastIndex + i, lowerBits.length);
+				int idx = normalizeCyclicI(currentIndex + 1, lowerBits.length);
+				mask = getUpperXBitsMask(bitsNeeded) >>> numberOfLastBits;
+				lowerBits[currentIndex] = ((lowerBits[currentIndex])
+						| (((mask & (lowerBits[idx])) >>> shift) << numberOfLastBits)) << shift;
+				lowerBits[idx] >>>= unit.bits() - numberOfLastBits;
+			}
+		}
+		default:
+			return lowerBits;
+		}
+
+	}
+
+	private static long aEQb(long a, long b) {
+		switch ((int) (a ^ b)) {
+		case 0:
+			return 1;
+		default:
+			return 0;
+		}
+	}
+
+	private static long min(long a, long b) {
+		return b ^ ((a ^ b) & -(((a - b) & ~(-1l >>> 1)) >>> unit.limitMask()));
+	}
+
+	private static long max(long a, long b) {
+		return a ^ ((a ^ b) & -(((a - b) & ~(-1l >>> 1)) >>> unit.limitMask()));
+	}
+
+	private static int min(int a, int b) {
+		return b ^ ((a ^ b) & -(((a - b) & ~(-1 >>> 1)) >>> BitUnit.INT.limitMask()));
+	}
+
+	private static int max(int a, int b) {
+		return a ^ ((a ^ b) & -(((a - b) & ~(-1 >>> 1)) >>> BitUnit.INT.limitMask()));
+	}
+
+	private static long aEQbI(long a, long b) {
+		return (int) aEQb(a, b);
+	}
+
+	private static long aLTb(long a, long b) {
+		// ((a-b)&~(-1l>>>1))>>>unit.limitMask()
+		return ((a - b) & ~(-1l >>> 1)) >>> unit.limitMask();
+	}
+
+	private static int aLTb(int a, int b) {
+		// ((a-b)&~(-1l>>>1))>>>unit.limitMask()
+		return ((a - b) & ~(-1 >>> 1)) >>> BitUnit.INT.limitMask();
+	}
+
+	private static int aLTbI(long a, long b) {
+		return (int) aLTb(a, b);
+	}
+
+	private static long aGTb(long a, long b) {
+		switch ((int) ((((a >>> (unit.bits() >> 1)) ^ (b >>> (unit.bits() >> 1)))
+				| ((a & (-1l >>> (unit.bits() >> 1))) ^ (b & (-1l >>> (unit.bits() >> 1))))))) {
+		case 0:
+			return 0;
+		default:
+			return (~((~(((a - b) & ~(-1l >>> 1)) >>> unit.limitMask()))) - 1) & 1;
+		}
+//		return (~((~(aEQb(a, b))) & (~(((a-b)&~(-1l>>>1))>>>unit.limitMask())))-1)&1;
+	}
+
 	/**
 	 * This actually operates more like getting the carries for left shifting btw
 	 * 
@@ -200,58 +443,83 @@ public class LongArrayShift {
 	 * @param amt
 	 * @return
 	 */
-	private static long[] getOrValsForRightShift(long[] bits, int size, int amt) {
-		if (amt == 0) {
+	public static long[] getOrValsForRightShift(long[] bits, int size, int amt) {
+		switch (amt) {
+		case 0:
 			return new long[bits.length];
-		}
-		int lastIndex = bits.length - 1;
-		int numberOfLastIndexBits = size & unit.limitMask();
-		if (size != 0 && numberOfLastIndexBits == 0) {
-			numberOfLastIndexBits = unit.bits();
-		}
-		long carryMask = ~(-1l >>> amt);
-		long lastIndexCarryMask = amt >= numberOfLastIndexBits ? ~(-1l << numberOfLastIndexBits)
-				: -1l << (numberOfLastIndexBits - amt);
-		long bleedOverMask = amt >= numberOfLastIndexBits ? ~(-1l >>> (amt - numberOfLastIndexBits)) : 0;
-		int numberOfShifts = unit.bits() - amt;
-		int lastIndexCarryShifts = unit.bits() - numberOfLastIndexBits;
+		default: {
+			int lastIndex = bits.length - 1;
+			int numberOfLastIndexBits = size & unit.limitMask();
+			switch (size) {
+			case 0:
+				break;
+			default:
+				switch (numberOfLastIndexBits) {
+				case 0:
+					numberOfLastIndexBits = unit.bits();
+				default:
+					break;
+				}
+			}
+			long carryMask = ~(-1l >>> amt);
+			long lastIndexCarryMask = -1l << (numberOfLastIndexBits - amt);
+			long bleedOverMask = 0;
+			switch (aLTb(numberOfLastIndexBits, amt)) {
+			case 1:
+				lastIndexCarryMask = ~(-1l << numberOfLastIndexBits);
+				bleedOverMask = ~(-1l >>> (amt - numberOfLastIndexBits));
+				break;
+			default:
+				break;
+			}
+			int numberOfShifts = unit.bits() - amt;
+			int lastIndexCarryShifts = unit.bits() - numberOfLastIndexBits;
 
-		long[] orVals = new long[bits.length];
+			long[] orVals = new long[bits.length];
 
-		for (int i = 0; i < bits.length; i++) {
-			int currentIndex = i;
-			long currentVal = bits[currentIndex];
-			if (currentIndex == lastIndex) {//removing this if branch increases performance by 10%...consider it
-				long orVal = currentVal&lastIndexCarryMask;
-				orVal <<= lastIndexCarryShifts;
-				if (currentIndex != 0 && bleedOverMask != 0) {
-					long bleedOver = orVals[currentIndex - 1];
+			for (int i = 0; i < lastIndex; i++) {
+				int currentIndex = i;
+				long currentVal = bits[currentIndex];
+				long orVal = currentVal & carryMask;
+				orVal >>>= numberOfShifts;
+				orVals[currentIndex] = orVal;
+			}
+			long currentVal = bits[lastIndex];
+			long orVal = currentVal & lastIndexCarryMask;
+			orVal <<= lastIndexCarryShifts;
+			switch (lastIndex) {
+
+			case 0:
+				break;
+			default: {
+				switch (Long.bitCount(bleedOverMask)) {
+				case 0:
+					break;
+				default: {
+					int prevIndex = lastIndex - 1;
+					long bleedOver = orVals[prevIndex];
 					bleedOver <<= numberOfShifts;
 					long bleedOverVal = bleedOverMask & bleedOver;
 					bleedOverVal >>>= numberOfLastIndexBits;
 					orVal |= bleedOverVal;
 					bleedOver &= ~bleedOverMask;
 					bleedOver >>>= numberOfShifts;
-					orVals[currentIndex - 1] = bleedOver;
+					orVals[prevIndex] = bleedOver;
 				}
-				orVal >>>= numberOfShifts;
-				orVals[currentIndex] = orVal;
-			} else {
-				long orVal = currentVal & carryMask;
-				orVal >>>= numberOfShifts;
-				orVals[currentIndex] = orVal;
+				}
 			}
+			}
+			orVal >>>= numberOfShifts;
+			orVals[lastIndex] = orVal;
+			return orVals;
 		}
-		return orVals;
+		}
 
 	}
-	
-	
-	
-	
 
 	/**
 	 * only slightly (2ns/op) faster than non inlined
+	 * 
 	 * @param bits
 	 * @param size
 	 * @param amt
@@ -280,25 +548,71 @@ public class LongArrayShift {
 			if (currentIndex == lastIndex) {
 				long orVal = (bits[currentIndex] & lastIndexCarryMask) << lastIndexCarryShifts;
 				if (currentIndex != 0 && bleedOverMask != 0) {
-					long bleedOver = orVals[currentIndex - 1]<<numberOfShifts;
-					long bleedOverVal = (bleedOverMask & bleedOver)>>>numberOfLastIndexBits;
+					long bleedOver = orVals[currentIndex - 1] << numberOfShifts;
+					long bleedOverVal = (bleedOverMask & bleedOver) >>> numberOfLastIndexBits;
 					orVal |= bleedOverVal;
-					bleedOver = (bleedOver&(~bleedOverMask))>>>numberOfShifts;
+					bleedOver = (bleedOver & (~bleedOverMask)) >>> numberOfShifts;
 					orVals[currentIndex - 1] = bleedOver;
 				}
-				orVals[i] =(orVal >>>numberOfShifts);
+				orVals[i] = (orVal >>> numberOfShifts);
 			} else {
 				long currentValue = bits[currentIndex];
-				orVals[i] = (currentValue & carryMask)>>>numberOfShifts;
+				orVals[i] = (currentValue & carryMask) >>> numberOfShifts;
 			}
 		}
 		return orVals;
 
 	}
 
-	
+	private static long getLowerXBitsMask(int numberOfBits) {
+		switch (numberOfBits) {
+		case 0:
+			return 0l;
+		case 64:
+			return -1l;
+		default:
+			return ~(-1l << numberOfBits);
+		}
+	}
+
+	private static long getUpperXBitsMask(int numberOfBits) {
+		switch (numberOfBits) {
+		case 0:
+			return 0l;
+		case 64:
+			return -1l;
+		default:
+			return ~(-1l >>> numberOfBits);
+		}
+
+	}
 
 	private static long[] shiftRight(long[] bits, int size, int amt) {
+		amt = normalizeCyclicI(amt, size);
+		int unitShifts = amt >>> unit.multOrDivShift();
+		amt -= (unitShifts << unit.multOrDivShift());
+		unitShifts = (int) quickMod(unitShifts, bits.length);
+		int numberOfLastBits = size & unit.limitMask();
+
+		long lastBitsMask = -1l >>> (unit.bits() - numberOfLastBits);
+		switch (unitShifts) {
+		case 0:
+			break;
+		default:
+			rotateAndCollapseForRightShift(bits, size, unitShifts);
+		}
+
+		long[] orVals = getOrValsForRightShift(bits, size, amt);
+		rotate(orVals, 1);
+
+		for (int i = 0; i < bits.length; i++) {
+			bits[i] = ((bits[i] << amt) | orVals[i]);
+		}
+		bits[bits.length - 1] &= lastBitsMask;
+		return bits;
+	}
+
+	private static long[] shiftRightVec(long[] bits, int size, int amt) {
 		amt = normalizeCyclicI(amt, size);
 		int unitShifts = amt >>> unit.multOrDivShift();
 		amt -= (unitShifts << unit.multOrDivShift());
@@ -312,12 +626,50 @@ public class LongArrayShift {
 		}
 		long[] orVals = getOrValsForRightShift(bits, size, amt);
 		rotate(orVals, 1);
-
 		for (int i = 0; i < bits.length; i++) {
-			bits[i] = ((bits[i] << amt) | orVals[i]);
+			bits[i] = (bits[i] << amt);
 		}
+		var orVecs = toVectors(orVals);
+		var bitsVecs = toVectors(bits);
+		int idx = 0;
+		for (int i = 0; i < orVecs.size(); i++) {
+			LongVector v = bitsVecs.get(i).or(orVecs.get(i));
+			long[] asArr = v.toArray();
+			System.arraycopy(asArr, 0, bits, idx, v.length());
+			idx += v.length();
+		}
+
 		bits[bits.length - 1] &= lastBitsMask;
 		return bits;
+	}
+
+	private static List<LongVector> toVectors(long[] longs) {
+		List<LongVector> vecs = new ArrayList<LongVector>();
+		for (int i = 0; i < longs.length;) {
+			var vec = LongVector.fromArray(getSpecies(longs.length - i), longs, i);
+			vecs.add(vec);
+			i += vec.length();
+		}
+		return vecs;
+	}
+
+	private static jdk.incubator.vector.VectorSpecies<Long> getSpecies(int size) {
+		switch (size) {
+		case 1:
+			return jdk.incubator.vector.LongVector.SPECIES_64;
+		case 2:
+		case 3:
+			return jdk.incubator.vector.LongVector.SPECIES_128;
+		case 4:
+		case 5:
+		case 6:
+		case 7:
+			return jdk.incubator.vector.LongVector.SPECIES_256;
+		case 8:
+			return jdk.incubator.vector.LongVector.SPECIES_512;
+		default:
+			return jdk.incubator.vector.LongVector.SPECIES_PREFERRED;
+		}
 	}
 
 	private static long[] shiftRightInlined(long[] bits, int size, int amt) {
@@ -341,8 +693,6 @@ public class LongArrayShift {
 		bits[bits.length - 1] &= lastBitsMask;
 		return bits;
 	}
-	
-	
 
 	/**
 	 * 
@@ -384,11 +734,21 @@ public class LongArrayShift {
 	}
 
 	public static long normalizeCyclic(long value, long bound) {
-		if (value < 0) {
-			if (-value > bound) {
+		int valComp = -(int) aLTb(value, 0);
+		switch (valComp) {
+		case 0:
+			valComp = (int) aGTb(value, bound);
+		}
+		switch (valComp) {
+		case -1: {
+			switch ((int) aGTb(-value, bound)) {
+			case 1:
 				value = quickMod(value, bound);
+				break;
 			}
 			value = bound + value;
+			break;
+		}
 		}
 		if (value == bound) {
 			return 0;
@@ -398,6 +758,7 @@ public class LongArrayShift {
 		}
 
 		return value;
+
 	}
 
 	private static long quickMod(long value, long bound) {
@@ -452,7 +813,8 @@ public class LongArrayShift {
 	 * @param longs
 	 * @param amount the amount of '0' bits that should be prepended to the first
 	 *               value in this array
-	 * @return a copy of <code>longs</code> with padding (should not modify passed in instance)
+	 * @return a copy of <code>longs</code> with padding (should not modify passed
+	 *         in instance)
 	 */
 	private static long[] offset(long[] longs, int amount) {
 		int numberOfZerosInLastElement = Long.numberOfLeadingZeros(longs[longs.length - 1]);
@@ -463,12 +825,12 @@ public class LongArrayShift {
 		int orValSize = (longs.length - 1) + expand;
 		long[] orVals = new long[orValSize];
 		long orMask = ~(-1l >>> amount);
-		
-		int shiftAmt=unit.bits()-amount;
-		
-		long[] result = new long[longs.length+wholeUnits+expand];
+
+		int shiftAmt = unit.bits() - amount;
+
+		long[] result = new long[longs.length + wholeUnits + expand];
 		System.arraycopy(longs, 0, result, wholeUnits, longs.length);
-		
+
 //		longs.clone();
 //		if (orValSize == longs.length) {
 //			result = new long[orValSize + 1];
@@ -490,11 +852,11 @@ public class LongArrayShift {
 			if (orValIdx > -1 && orValIdx < orVals.length) {
 				orVal = orVals[orValIdx];
 			}
-			int resultIdx=i+wholeUnits;
+			int resultIdx = i + wholeUnits;
 			result[resultIdx] <<= shift;
 			result[resultIdx] |= orVal;
 		}
-		if (expand==1) {
+		if (expand == 1) {
 			result[result.length - 1] = orVals[orVals.length - 1];
 		}
 		return result;
@@ -521,7 +883,13 @@ public class LongArrayShift {
 		return value;
 	}
 
-	public static void main(String[] args) {
+	private static void oldMain(String[] args) {
+		System.out.println(BinaryStrings.toBinaryString(getLowerXBitsMask(15)));
+		System.out.println(BinaryStrings.toBinaryString(getUpperXBitsMask(64 - 15)));
+		System.out.println(BinaryStrings.toBinaryString(getLowerXBitsMask(33)));
+		System.out.println(BinaryStrings.toBinaryString(getUpperXBitsMask(64 - 33)));
+		System.out.println(BinaryStrings.toBinaryString(getLowerXBitsMask(64)));
+		System.out.println(BinaryStrings.toBinaryString(getUpperXBitsMask(64)));
 		int bitLen = 128 + 19;
 		LongQuickBitArray lqba = new LongQuickBitArray(bitLen);// LongQuickBitArray.createRandomArrayOfLength(bitLen);
 		LongQuickBitArray rando = LongQuickBitArray.createRandomArrayOfLength(bitLen);
@@ -535,9 +903,16 @@ public class LongArrayShift {
 		rando.set(128);
 		rando.set(129);
 		rando.set(130);
-		rando.set(148);
+//		rando.set(148);
 		LongQuickBitArray randoClone = rando.clone();
-		
+		System.out.println(BinaryStrings.toBinaryString(randoClone.getBitArray(), rando.getSize()));
+//		System.out.println(
+//				BinaryStrings.toBinaryString(getLowerXBitsInEach(randoClone.getBitArray(), randoClone.getSize(), 31)));
+//		bitwiseRotateUsingSubArrays(randoClone.getBitArray(), randoClone.getSize(), 1);
+//		System.out.println(randoClone);
+		bitwiseRotateNew(randoClone.getBitArray(), randoClone.getSize(), 1);
+//		System.out.println(randoClone);
+		System.out.println(BinaryStrings.toBinaryString(randoClone.getBitArray(), randoClone.getSize()));
 //		System.out.println(BinaryStrings.toBinaryString(rando.getBitArray()));
 //		long[] sub = getValues(rando.getBitArray(), 3, 149);
 //		System.out.println(BinaryStrings.toBinaryString(sub));
@@ -551,5 +926,27 @@ public class LongArrayShift {
 //		System.out.println(rando);
 //		System.out.println(BinaryStrings.toBinaryString(subs));
 
+	}
+
+	private static long derp(long a, long b) {
+		return ((((a >>> (unit.bits() >> 1)) ^ (b >>> (unit.bits() >> 1)))
+				| ((a & (-1l >>> (unit.bits() >> 1))) ^ (b & (-1l >>> (unit.bits() >> 1))))));
+	}
+
+	private static void checkBitHackComps() {
+		System.out.println(derp(1, -1));
+		System.out.println((int) derp(1, -1));
+		System.out.println(aGTb(0, -1));
+		System.out.println(aGTb(0, 100));
+		System.out.println(aGTb(-1, 0));
+		System.out.println(aGTb(5, 4));
+		System.out.println(aGTb(-4, 5));
+		System.out.println(aGTb(5, -5));
+		System.out.println(aGTb(-5, -5));
+
+	}
+
+	public static void main(String[] args) {
+		oldMain(args);
 	}
 }
