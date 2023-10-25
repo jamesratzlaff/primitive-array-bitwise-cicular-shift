@@ -34,14 +34,12 @@ public class LongQuickBitArrayTest {
 	
 	private static final Random r;
 	private static final ObjIntConsumer<LongQuickBitArray> normal = createFunctor("bitwiseRotate", LongArrayShift::bitwiseRotate);
-	private static final ObjIntConsumer<LongQuickBitArray> inlined = createFunctor("bitwiseRotateInlined",LongArrayShift::bitwiseRotateInlined);
 	private static final ObjIntConsumer<LongQuickBitArray> subArr = createFunctor("bitwiseRotateUsingSubArrays",LongArrayShift::bitwiseRotateUsingSubArrays);
-	private static final ObjIntConsumer<LongQuickBitArray> vec = createFunctor("bitwiseRotateVec",LongArrayShift::bitwiseRotateVec);
 	@SuppressWarnings("unchecked")
 	@SafeVarargs
 	private void testShift(LongQuickBitArray lqba, int shiftAmt, ObjIntConsumer<LongQuickBitArray>...funcs) {
 		if(funcs.length==0) {
-			funcs= new ObjIntConsumer[]{normal,inlined,subArr,vec};
+			funcs= new ObjIntConsumer[]{normal,subArr};
 		}
 		System.out.println("testing array of len "+lqba.getSize()+" shifting "+shiftAmt);
 		
