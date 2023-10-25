@@ -769,8 +769,10 @@ public class LongArrayShift {
 	}
 
 	private static boolean isPowerOf2(long amt) {
-		if (amt < 0) {
-			amt = -amt;
+		switch((int)aLTb(amt,0)) {
+		case 1:
+			amt=-amt;
+			break;
 		}
 		return Long.bitCount(amt) == 1;
 	}
