@@ -1,5 +1,9 @@
 package com.jamesratzlaff.util.bit;
 
+import com.jamesratzlaff.util.bit.converters.ByteArrayConverter;
+import com.jamesratzlaff.util.bit.converters.IntArrayConverter;
+import com.jamesratzlaff.util.bit.converters.ShortArrayConverter;
+
 public enum BitUnit implements IBitUnit {
 	BYTE(Byte.SIZE),SHORT(Short.SIZE),INT(Integer.SIZE),LONG(Long.SIZE);
 	
@@ -29,56 +33,10 @@ public enum BitUnit implements IBitUnit {
 		return this.logBase2;
 	}
 	
-	public static class ArraySplittersAndJoiners {
-		public static class BYTE {
-			public static byte[] toBytes(long[] longs) {
-				return null;
-			}
-			public static byte[] toBytes(int[] ints) {
-				return null;
-			}
-			public static byte[] toBytes(short[] shorts) {
-				return null;
-			}
-			
-		
-			public static short[] toShorts(byte[] bytes) {
-				return null;
-			}
-			public static int[] toInts(byte[] bytes) {
-				return null;
-			}
-			public static long[] toLongs(byte[] bytes) {
-				return null;
-			}
-		}
-		public static class SHORT {
-			
-			public static short[] toShorts(long[] longs) {
-				return null;
-			}
-			public static short[] toShorts(int[] ints) {
-				return null;
-			}
-			public static short[] toShorts(byte[] bytes) {
-				return ArraySplittersAndJoiners.BYTE.toShorts(bytes);
-			}
-			public static byte[] toBytes(short[] shorts) {
-				return ArraySplittersAndJoiners.BYTE.toBytes(shorts);
-			}
-			public static int[] toInts(short[] shorts) {
-				return null;
-			}
-			
-			public static long[] toLongs(short[] shorts) {
-				return null;
-			}
-		}
-		public static class INT {
-			public static int[] toInts(long[] longs) {
-				return null;
-			}
-		}
+	public static final class ArrayConverters {
+		public static final ByteArrayConverter BYTE = new ByteArrayConverter();
+		public static final ShortArrayConverter SHORT = new ShortArrayConverter();
+		public static final IntArrayConverter INT = new IntArrayConverter();
 	}
 		
 }

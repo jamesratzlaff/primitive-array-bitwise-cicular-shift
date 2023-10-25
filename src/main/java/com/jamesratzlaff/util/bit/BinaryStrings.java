@@ -3,6 +3,8 @@ package com.jamesratzlaff.util.bit;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 public class BinaryStrings {
 	public static String toBinaryString(int[] bits) {
@@ -25,6 +27,75 @@ public class BinaryStrings {
 		sb.append(String.join(separator, strs));
 		sb.append(']');
 		return sb.toString();
+	}
+
+	public static String toBinaryString(List<Number> nums) {
+		StringBuilder sb = new StringBuilder();
+		sb.append('[');
+		sb.append(String.join(",",toBinaryStringList(nums)));
+		sb.append(']');
+		return sb.toString();
+	}
+	
+	private static List<String> toBinaryStringList(List<Number> bits) {
+		return bits.stream().map(BinaryStrings::toBinaryString).collect(Collectors.toList());
+	}
+
+	private static final int getBits(Number n) {
+		Class<? extends Number> numberClass = n.getClass();
+		String clazzName = numberClass.getSimpleName();
+		int bits = switch (clazzName) {
+		case "Byte" -> {
+			yield Byte.SIZE;
+		}
+		case "Short" -> {
+			yield Short.SIZE;
+		}
+		case "Integer" -> {
+			yield Integer.SIZE;
+		}
+		case "Long" -> {
+			yield Long.SIZE;
+		}
+		case "Float" -> {
+			yield Float.SIZE;
+		}
+		case "Double" -> {
+			yield Double.SIZE;
+		}
+		default -> {
+			yield 0;
+		}
+		};
+		return bits;
+	}
+	private static final Function<Number,String> getToBinaryString(Number n) {
+		Class<? extends Number> numberClass = n.getClass();
+		String clazzName = numberClass.getSimpleName();
+		Function<Number,String> func = switch (clazzName) {
+		case "Byte" -> {
+			yield (num)->Integer.toBinaryString(0xFF&num.byteValue());
+		}
+		case "Short" -> {
+			yield (num)->Integer.toBinaryString(0xFFFF&num.shortValue());
+		}
+		case "Integer" -> {
+			yield (num)->Integer.toBinaryString(num.intValue());
+		}
+		case "Long" -> {
+			yield (num)->Long.toBinaryString(num.longValue());
+		}
+		case "Float" -> {
+			yield (num)->Integer.toBinaryString(Float.floatToIntBits(num.floatValue()));
+		}
+		case "Double" -> {
+			yield  (num)->Long.toBinaryString(Double.doubleToRawLongBits(num.doubleValue()));
+		}
+		default -> {
+			yield (num)->Long.toBinaryString(num.longValue());
+		}
+		};
+		return func;
 	}
 
 	private static List<String> toStringList(int[] bits, int size) {
@@ -54,7 +125,20 @@ public class BinaryStrings {
 		}
 		return binString;
 	}
-	
+	public static String toBinaryString(Number value) {
+		int minBits = getBits(value);
+		var toBinStrFunc = getToBinaryString(value);
+		String binString = toBinStrFunc.apply(value);
+		int zerosNeeded = minBits - binString.length();
+		if (zerosNeeded > 0) {
+			char[] zeros = new char[zerosNeeded];
+			Arrays.fill(zeros, '0');
+			String zerosString = new String(zeros);
+			binString = zerosString + binString;
+		}
+		return binString;
+	}
+
 	public static String toBinaryString(long[] bits) {
 		return toBinaryString(bits, ",");
 	}
@@ -69,8 +153,8 @@ public class BinaryStrings {
 	}
 
 	public static String toBinaryString(long[] bits, int size, String separator) {
-		if(size<0) {
-			size=BitUnit.LONG.bits()*bits.length;
+		if (size < 0) {
+			size = BitUnit.LONG.bits() * bits.length;
 		}
 		StringBuilder sb = new StringBuilder();
 		sb.append('[');
@@ -91,12 +175,14 @@ public class BinaryStrings {
 		return strs;
 
 	}
-	public static String toBinaryString(long value, long...values) {
-		long[] all = new long[values.length+1];
-		all[0]=value;
+
+	public static String toBinaryString(long value, long... values) {
+		long[] all = new long[values.length + 1];
+		all[0] = value;
 		System.arraycopy(values, 0, all, 1, values.length);
 		return toBinaryString(all);
 	}
+
 	public static String toBinaryString(long value) {
 		return toBinaryString(value, BitUnit.LONG.bits());
 	}

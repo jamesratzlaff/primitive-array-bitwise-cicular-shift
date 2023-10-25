@@ -14,7 +14,7 @@ public interface IBitUnit {
 		return log2();
 	}
 	
-	default int per(BitUnit other) {
+	default int per(IBitUnit other) {
 		return other.bits()>>>this.multOrDivShift();
 	}
 	default long modulandL(long value) {

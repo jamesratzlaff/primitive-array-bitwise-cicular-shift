@@ -28,7 +28,10 @@ public class LongArrayShift {
 	 * @return the passed in <code>bits</code> parameter with its bits rotated
 	 */
 	public static long[] bitwiseRotate(long[] bits, long size, long amt) {
+		if(amt>=0) {
 		return shiftRight(bits, (int) size, (int) amt);
+		}
+		return bitwiseRotateUsingSubArrays(bits, size, amt);
 	}
 
 	
@@ -194,41 +197,41 @@ public class LongArrayShift {
 		}
 	}
 
-	private static long min(long a, long b) {
+	 static long min(long a, long b) {
 		return b ^ ((a ^ b) & -(((a - b) & ~(-1l >>> 1)) >>> unit.limitMask()));
 	}
 
-	private static long max(long a, long b) {
+	 static long max(long a, long b) {
 		return a ^ ((a ^ b) & -(((a - b) & ~(-1l >>> 1)) >>> unit.limitMask()));
 	}
 
-	private static int min(int a, int b) {
+	 static int min(int a, int b) {
 		return b ^ ((a ^ b) & -(((a - b) & ~(-1 >>> 1)) >>> BitUnit.INT.limitMask()));
 	}
 
-	private static int max(int a, int b) {
+	 static int max(int a, int b) {
 		return a ^ ((a ^ b) & -(((a - b) & ~(-1 >>> 1)) >>> BitUnit.INT.limitMask()));
 	}
 
-	private static long aEQbI(long a, long b) {
+	 static long aEQbI(long a, long b) {
 		return (int) aEQb(a, b);
 	}
 
-	private static long aLTb(long a, long b) {
+	 static long aLTb(long a, long b) {
 		// ((a-b)&~(-1l>>>1))>>>unit.limitMask()
 		return ((a - b) & ~(-1l >>> 1)) >>> unit.limitMask();
 	}
 
-	private static int aLTb(int a, int b) {
+	 static int aLTb(int a, int b) {
 		// ((a-b)&~(-1l>>>1))>>>unit.limitMask()
 		return ((a - b) & ~(-1 >>> 1)) >>> BitUnit.INT.limitMask();
 	}
 
-	private static int aLTbI(long a, long b) {
+	 static int aLTbI(long a, long b) {
 		return (int) aLTb(a, b);
 	}
 
-	private static long aGTb(long a, long b) {
+	 static long aGTb(long a, long b) {
 		switch ((int) ((((a >>> (unit.bits() >> 1)) ^ (b >>> (unit.bits() >> 1)))
 				| ((a & (-1l >>> (unit.bits() >> 1))) ^ (b & (-1l >>> (unit.bits() >> 1))))))) {
 		case 0:
