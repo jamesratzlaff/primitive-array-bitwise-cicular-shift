@@ -1,4 +1,7 @@
-package com.jamesratzlaff.util.bit;
+package com.jamesratzlaff.util.bit.arrays;
+
+import com.jamesratzlaff.util.bit.BinaryStrings;
+import com.jamesratzlaff.util.bit.BitUnit;
 
 public class LongArrayShift {
 
@@ -28,13 +31,11 @@ public class LongArrayShift {
 	 * @return the passed in <code>bits</code> parameter with its bits rotated
 	 */
 	public static long[] bitwiseRotate(long[] bits, long size, long amt) {
-		if(amt>=0) {
-		return shiftRight(bits, (int) size, (int) amt);
+		if (amt >= 0) {
+			return shiftRight(bits, (int) size, (int) amt);
 		}
 		return bitwiseRotateUsingSubArrays(bits, size, amt);
 	}
-
-	
 
 	public static long[] nonMutatingBitwiseRotateInnerBits(long[] bits, long size, long amt, int innerOffset,
 			int innerEndOffsetExcl) {
@@ -66,8 +67,6 @@ public class LongArrayShift {
 			toXor[i] ^= xorer[i];
 		}
 	}
-
-	
 
 	/**
 	 * For some reason this is much faster with negative amounts than positive
@@ -185,9 +184,6 @@ public class LongArrayShift {
 
 	}
 
-	
-
-
 	private static long aEQb(long a, long b) {
 		switch ((int) (a ^ b)) {
 		case 0:
@@ -197,41 +193,41 @@ public class LongArrayShift {
 		}
 	}
 
-	 static long min(long a, long b) {
+	static long min(long a, long b) {
 		return b ^ ((a ^ b) & -(((a - b) & ~(-1l >>> 1)) >>> unit.limitMask()));
 	}
 
-	 static long max(long a, long b) {
+	static long max(long a, long b) {
 		return a ^ ((a ^ b) & -(((a - b) & ~(-1l >>> 1)) >>> unit.limitMask()));
 	}
 
-	 static int min(int a, int b) {
+	static int min(int a, int b) {
 		return b ^ ((a ^ b) & -(((a - b) & ~(-1 >>> 1)) >>> BitUnit.INT.limitMask()));
 	}
 
-	 static int max(int a, int b) {
+	static int max(int a, int b) {
 		return a ^ ((a ^ b) & -(((a - b) & ~(-1 >>> 1)) >>> BitUnit.INT.limitMask()));
 	}
 
-	 static long aEQbI(long a, long b) {
+	static long aEQbI(long a, long b) {
 		return (int) aEQb(a, b);
 	}
 
-	 static long aLTb(long a, long b) {
+	static long aLTb(long a, long b) {
 		// ((a-b)&~(-1l>>>1))>>>unit.limitMask()
 		return ((a - b) & ~(-1l >>> 1)) >>> unit.limitMask();
 	}
 
-	 static int aLTb(int a, int b) {
+	static int aLTb(int a, int b) {
 		// ((a-b)&~(-1l>>>1))>>>unit.limitMask()
 		return ((a - b) & ~(-1 >>> 1)) >>> BitUnit.INT.limitMask();
 	}
 
-	 static int aLTbI(long a, long b) {
+	static int aLTbI(long a, long b) {
 		return (int) aLTb(a, b);
 	}
 
-	 static long aGTb(long a, long b) {
+	static long aGTb(long a, long b) {
 		switch ((int) ((((a >>> (unit.bits() >> 1)) ^ (b >>> (unit.bits() >> 1)))
 				| ((a & (-1l >>> (unit.bits() >> 1))) ^ (b & (-1l >>> (unit.bits() >> 1))))))) {
 		case 0:
@@ -324,8 +320,6 @@ public class LongArrayShift {
 
 	}
 
-
-
 	private static long[] shiftRight(long[] bits, int size, int amt) {
 		amt = normalizeCyclicI(amt, size);
 		int unitShifts = amt >>> unit.multOrDivShift();
@@ -351,7 +345,6 @@ public class LongArrayShift {
 		return bits;
 	}
 
-	
 	/**
 	 * 
 	 * @param array the <code>long[]</code> of values to rotate
@@ -427,9 +420,9 @@ public class LongArrayShift {
 	}
 
 	private static boolean isPowerOf2(long amt) {
-		switch((int)aLTb(amt,0)) {
+		switch ((int) aLTb(amt, 0)) {
 		case 1:
-			amt=-amt;
+			amt = -amt;
 			break;
 		}
 		return Long.bitCount(amt) == 1;

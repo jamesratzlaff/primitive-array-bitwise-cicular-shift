@@ -1,7 +1,9 @@
-package com.jamesratzlaff.util.bit;
+package com.jamesratzlaff.util.bit.arrays;
 
 import java.util.Arrays;
 import java.util.Random;
+
+import com.jamesratzlaff.util.bit.BitUnit;
 
 public class QuickBitArray {
 

@@ -2,6 +2,9 @@ package com.jamesratzlaff.util.bit;
 
 import java.util.Arrays;
 
+import com.jamesratzlaff.util.bit.arrays.LongArrayShift;
+import com.jamesratzlaff.util.bit.arrays.LongQuickBitArray;
+
 public class LongQuickBitMatrix {
 	private static final BitUnit unit = BitUnit.LONG;
 
@@ -258,6 +261,20 @@ public class LongQuickBitMatrix {
 			row.setBulk(x << unit.multOrDivShift(), bits[offset + x]);
 		}
 		return row;
+	}
+	
+	public LongQuickBitArray getColumn(int x, LongQuickBitArray column) {
+		if (column == null || column.getSize() < height) {
+			column = new LongQuickBitArray(height);
+		} else {
+			column.clear();
+		}
+		for (int y = 0; y < height; y++) {
+			if(get(x, y)) {
+				column.set(y);
+			}
+		}
+		return column;
 	}
 
 	/**

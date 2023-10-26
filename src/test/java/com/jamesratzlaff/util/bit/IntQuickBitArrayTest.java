@@ -9,17 +9,17 @@ import java.util.function.ObjIntConsumer;
 
 import org.junit.Test;
 
-import com.jamesratzlaff.util.bit.arrays.LongArrayShift;
-import com.jamesratzlaff.util.bit.arrays.LongQuickBitArray;
+import com.jamesratzlaff.util.bit.arrays.IntArrayShift;
+import com.jamesratzlaff.util.bit.arrays.QuickBitArray;
 
-public class LongQuickBitArrayTest {
+public class IntQuickBitArrayTest {
 	@FunctionalInterface
-	private static interface LongArrayLongLongFunction {
-		long[] apply(long[] a, long size, long amt);
+	private static interface IntArrayIntIntFunction {
+		int[] apply(int[] a, int size, int amt);
 	}
-	private static ObjIntConsumer<LongQuickBitArray> createFunctor(String name, LongArrayLongLongFunction func){
-		return (LongQuickBitArray lqba, int shiftAmt)->{
-			long size=lqba.getSize();
+	private static ObjIntConsumer<QuickBitArray> createFunctor(String name, IntArrayIntIntFunction func){
+		return (QuickBitArray lqba, int shiftAmt)->{
+			int size=lqba.getSize();
 			System.out.println("Running "+name+" with array of len "+size+" shifting "+shiftAmt);
 			func.apply(lqba.getBitArray(), size, shiftAmt);
 		};
@@ -36,29 +36,30 @@ public class LongQuickBitArrayTest {
 	}
 	
 	private static final Random r;
-	private static final ObjIntConsumer<LongQuickBitArray> normal = createFunctor("bitwiseRotate", LongArrayShift::bitwiseRotate);
-	private static final ObjIntConsumer<LongQuickBitArray> subArr = createFunctor("bitwiseRotateUsingSubArrays",LongArrayShift::bitwiseRotateUsingSubArrays);
+	private static final ObjIntConsumer<QuickBitArray> normal = createFunctor("bitwiseRotate", IntArrayShift::bitwiseRotate);
+	private static final ObjIntConsumer<QuickBitArray> subArr = createFunctor("bitwiseRotateUsingSubArrays",IntArrayShift::bitwiseRotateUsingSubArrays);
+	private static final ObjIntConsumer<QuickBitArray> old  = createFunctor("bitwiseRotateOld",IntArrayShift::bitwiseRotateOld);
 	@SuppressWarnings("unchecked")
 	@SafeVarargs
-	private void testShift(LongQuickBitArray lqba, int shiftAmt, ObjIntConsumer<LongQuickBitArray>...funcs) {
+	private void testShift(QuickBitArray lqba, int shiftAmt, ObjIntConsumer<QuickBitArray>...funcs) {
 		if(funcs.length==0) {
 			funcs= new ObjIntConsumer[]{normal,subArr};
 		}
 		System.out.println("testing array of len "+lqba.getSize()+" shifting "+shiftAmt);
 		
 		for(int i=0;i<funcs.length;i++) {
-			LongQuickBitArray manual = lqba.clone();
-			ObjIntConsumer<LongQuickBitArray> currentFunc = funcs[i];
-			LongQuickBitArray lqba2 = lqba.clone();
+			QuickBitArray manual = lqba.clone();
+			ObjIntConsumer<QuickBitArray> currentFunc = funcs[i];
+			QuickBitArray lqba2 = lqba.clone();
 			shiftAndShiftBackAndCheckEquality(shiftAmt, manual, lqba2, currentFunc);
 			assertEquals(lqba,manual);
 		}
 	}
-	private void shiftAndShiftBackAndCheckEquality(int shiftAmt, LongQuickBitArray manual, LongQuickBitArray lqba2, ObjIntConsumer<LongQuickBitArray> currentFunc) {
+	private void shiftAndShiftBackAndCheckEquality(int shiftAmt, QuickBitArray manual, QuickBitArray lqba2, ObjIntConsumer<QuickBitArray> currentFunc) {
 		shiftAndCheckEquality(shiftAmt, manual, lqba2, currentFunc);
 		shiftAndCheckEquality(-shiftAmt, manual, lqba2, currentFunc);
 	}
-	private void shiftAndCheckEquality(int shiftAmt, LongQuickBitArray manual, LongQuickBitArray lqba2, ObjIntConsumer<LongQuickBitArray> currentFunc) {
+	private void shiftAndCheckEquality(int shiftAmt, QuickBitArray manual, QuickBitArray lqba2, ObjIntConsumer<QuickBitArray> currentFunc) {
 		currentFunc.accept(lqba2, shiftAmt);
 		manual.shift(shiftAmt);
 		assertEquals(manual, lqba2);
@@ -78,7 +79,7 @@ public class LongQuickBitArrayTest {
 	@Test
 	public void testPowerOfTwoSizeShiftNonPowerOfTwo() {
 		for(int i=1024;i>0;i>>>=1) {
-			LongQuickBitArray lqba = LongQuickBitArray.createRandomArrayOfLength(i);
+			QuickBitArray lqba = QuickBitArray.createRandomArrayOfLength(i);
 			int shiftAmt = 31;
 			testShift(lqba, shiftAmt);
 		}
@@ -89,7 +90,7 @@ public class LongQuickBitArrayTest {
 	public void testPowerOfTwoSizeShiftPowerOfTwo() {
 		System.out.println("▀ ▁ ▂ ▃ ▄ ▅ ▆ ▇ █ ▉ ▊ ▋ ▌ ▍ ▎ ▏▐ ░ ▒ ▓ ▔ ▕ ▖ ▗ ▘ ▙ ▚ ▛ ▜ ▝ ▞ ▟▪▮");
 		for(int i=128;i>0;i>>>=1) {
-			LongQuickBitArray lqba = LongQuickBitArray.createRandomArrayOfLength(i);
+			QuickBitArray lqba = QuickBitArray.createRandomArrayOfLength(i);
 			int shiftAmt = getRandomPowerOf2();
 			testShift(lqba, shiftAmt);
 		}
@@ -99,7 +100,7 @@ public class LongQuickBitArrayTest {
 	@Test
 	public void testNonPowerOfTwoSizeShiftPowerOfTwo() {
 		for(int i=1024;i>0;i>>>=1) {
-			LongQuickBitArray lqba = LongQuickBitArray.createRandomArrayOfLength(i+13);
+			QuickBitArray lqba = QuickBitArray.createRandomArrayOfLength(i+13);
 			int shiftAmt = getRandomPowerOf2();
 			testShift(lqba, shiftAmt);
 		}
@@ -109,4 +110,5 @@ public class LongQuickBitArrayTest {
 
 	
 	
+
 }
