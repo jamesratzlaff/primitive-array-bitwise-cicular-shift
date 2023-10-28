@@ -34,7 +34,7 @@ public class LongQuickBitMatrix {
 		}
 		this.width = width;
 		this.height = height;
-		this.rowSize = (width + unit.limitMask()) >>>unit.bits();
+		this.rowSize = (width + unit.limitMask()) >>>unit.multOrDivShift();
 		bits = new long[rowSize * height];
 	}
 
@@ -284,6 +284,16 @@ public class LongQuickBitMatrix {
 	public void setRow(int y, LongQuickBitArray row) {
 		System.arraycopy(row.getBitArray(), 0, bits, y * rowSize, rowSize);
 	}
+	
+	public void setColumn(int x, LongQuickBitArray column) {
+		for(int i=0;i<this.height;i++) {
+			if(column.get(i)) {
+				this.set(x, i);
+			} else {
+				this.unset(x, i);
+			}
+		}
+	}
 
 	/**
 	 * Modifies this {@code BitMatrix} to represent the same but rotated the given
@@ -360,14 +370,14 @@ public class LongQuickBitMatrix {
 	 *         null if it is all white
 	 */
 	public int[] getEnclosingRectangle() {
-		int left = width;
-		int top = height;
-		int right = -1;
-		int bottom = -1;
+		long left = width;
+		long top = height;
+		long right = -1;
+		long bottom = -1;
 
 		for (int y = 0; y < height; y++) {
-			for (int x32 = 0; x32 < rowSize; x32++) {
-				long theBits = bits[y * rowSize + x32];
+			for (long x32 = 0; x32 < rowSize; x32++) {
+				long theBits = bits[y * rowSize + (int)x32];
 				if (theBits != 0) {
 					if (y < top) {
 						top = y;
@@ -376,7 +386,7 @@ public class LongQuickBitMatrix {
 						bottom = y;
 					}
 					if ((x32 <<unit.multOrDivShift()) < left) {
-						int bit = 0;
+						long bit = 0;
 						while ((theBits << (unit.limitMask() - bit)) == 0) {
 							bit++;
 						}
@@ -401,7 +411,7 @@ public class LongQuickBitMatrix {
 			return null;
 		}
 
-		return new int[] { left, top, right - left + 1, bottom - top + 1 };
+		return new int[] { (int)left, (int)top, (int)right - (int)left + 1, (int)bottom - (int)top + 1 };
 	}
 
 	/**
@@ -418,8 +428,8 @@ public class LongQuickBitMatrix {
 		if (bitsOffset == bits.length) {
 			return null;
 		}
-		int y = bitsOffset / rowSize;
-		int x = (bitsOffset % rowSize) << unit.multOrDivShift();
+		long y = bitsOffset / rowSize;
+		long x = (bitsOffset % rowSize) << unit.multOrDivShift();
 
 		long theBits = bits[bitsOffset];
 		int bit = 0;
@@ -427,7 +437,7 @@ public class LongQuickBitMatrix {
 			bit++;
 		}
 		x += bit;
-		return new int[] { x, y };
+		return new int[] { (int)x, (int)y };
 	}
 
 	public int[] getBottomRightOnBit() {
@@ -439,17 +449,17 @@ public class LongQuickBitMatrix {
 			return null;
 		}
 
-		int y = bitsOffset / rowSize;
-		int x = (bitsOffset % rowSize) << unit.multOrDivShift();
+		long y = bitsOffset / rowSize;
+		long x = (bitsOffset % rowSize) << unit.multOrDivShift();
 
 		long theBits = bits[bitsOffset];
-		int bit = unit.limitMask();
+		long bit = unit.limitMask();
 		while ((theBits >>> bit) == 0) {
 			bit--;
 		}
 		x += bit;
 
-		return new int[] { x, y };
+		return new int[] { (int)x, (int)y };
 	}
 
 	/**
@@ -472,7 +482,9 @@ public class LongQuickBitMatrix {
 	public int getRowSize() {
 		return rowSize;
 	}
-
+	public long[] getBits() {
+		return this.bits;
+	}
 	@Override
 	public boolean equals(Object o) {
 		if (!(o instanceof LongQuickBitMatrix)) {
@@ -535,6 +547,7 @@ public class LongQuickBitMatrix {
 		return result.toString();
 	}
 
+	
 	@Override
 	public LongQuickBitMatrix clone() {
 		return new LongQuickBitMatrix(width, height, rowSize, bits.clone());
@@ -542,6 +555,23 @@ public class LongQuickBitMatrix {
 	
 	public void rotX(int amount) {
 		LongArrayShift.rotate(bits, amount);
+	}
+	
+	public static void main(String[] args) {
+		LongQuickBitMatrix lqbm = new LongQuickBitMatrix(100);
+		for(int i=0;i<lqbm.getWidth();i++) {
+			lqbm.set(i, 0);
+			lqbm.set(i, lqbm.getHeight()-1);
+			lqbm.set(i, i);
+			lqbm.set(i, ((lqbm.getHeight()-1)-i));
+		}
+		for(int i=0;i<lqbm.getHeight();i++) {
+			lqbm.set(0, i);
+			lqbm.set(lqbm.getWidth()-1, i);
+		}
+		System.out.println(lqbm);
+		String s = BitStringStream.toString(lqbm.bits, lqbm.getWidth());
+		System.out.println(s);
 	}
 
 }
