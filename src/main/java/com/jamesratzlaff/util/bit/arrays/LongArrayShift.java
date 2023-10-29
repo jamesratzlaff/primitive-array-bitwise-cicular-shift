@@ -472,6 +472,7 @@ public class LongArrayShift {
 	private static long[] offset(long[] longs, int amount) {
 		int numberOfZerosInLastElement = Long.numberOfLeadingZeros(longs[longs.length - 1]);
 		int wholeUnits = amount >> unit.multOrDivShift();
+		
 		amount -= wholeUnits << unit.multOrDivShift();
 		int amountAndZeroDiff = amount - numberOfZerosInLastElement;
 		int expand = amountAndZeroDiff > 0 ? 1 : 0;

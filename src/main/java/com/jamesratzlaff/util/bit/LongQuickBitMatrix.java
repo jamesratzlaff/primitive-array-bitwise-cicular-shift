@@ -137,6 +137,20 @@ public class LongQuickBitMatrix {
 		int offset = y * rowSize + (x >>> unit.multOrDivShift());
 		return ((bits[offset] >>> (x & unit.limitMask())) & 1l) != 0;
 	}
+	
+	public boolean getCyclic(int x, int y) {
+		x=LongArrayShift.normalizeCyclicI(x, this.getWidth());
+		y=LongArrayShift.normalizeCyclicI(y, this.getHeight());
+		return get(x,y);
+	}
+	
+	public void setCyclic(int x, int y) {
+		x=LongArrayShift.normalizeCyclicI(x, this.getWidth());
+		y=LongArrayShift.normalizeCyclicI(y, this.getHeight());
+		set(x,y);
+	}
+	
+	
 
 	/**
 	 * <p>
@@ -169,6 +183,23 @@ public class LongQuickBitMatrix {
 		bits[offset] ^= 1l << (x & unit.limitMask());
 	}
 
+	public void unsetCyclic(int x, int y) {
+		x=LongArrayShift.normalizeCyclicI(x, this.getWidth());
+		y=LongArrayShift.normalizeCyclicI(y, this.getHeight());
+		unset(x,y);
+	}
+	
+	public void flipCyclic(int x, int y) {
+		x=LongArrayShift.normalizeCyclicI(x, this.getWidth());
+		y=LongArrayShift.normalizeCyclicI(y, this.getHeight());
+		flip(x,y);
+	}
+	
+	int getRowOffset(int y) {
+		y=LongArrayShift.normalizeCyclicI(y, this.getHeight());
+		return (y*this.getRowSize())<<unit.multOrDivShift();
+	}
+	
 	/**
 	 * <p>
 	 * Flips every bit in the matrix.
@@ -264,8 +295,8 @@ public class LongQuickBitMatrix {
 	}
 	
 	public LongQuickBitArray getColumn(int x, LongQuickBitArray column) {
-		if (column == null || column.getSize() < height) {
-			column = new LongQuickBitArray(height);
+		if (column == null || column.getSize() < this.getHeight()) {
+			column = new LongQuickBitArray(this.getHeight());
 		} else {
 			column.clear();
 		}
@@ -510,7 +541,8 @@ public class LongQuickBitMatrix {
 	 */
 	@Override
 	public String toString() {
-		return toString("X ", "  ");
+		return BitStringStream.toString(bits, width);
+//		return toString("██", "  ");
 	}
 
 	/**
@@ -553,9 +585,40 @@ public class LongQuickBitMatrix {
 		return new LongQuickBitMatrix(width, height, rowSize, bits.clone());
 	}
 	
-	public void rotX(int amount) {
+	public void rotateCyclic(int amount) {
 		LongArrayShift.rotate(bits, amount);
 	}
+	public void rotateRowCyclic(int amount, int row) {
+		int rowOffset = this.getRowOffset(row);
+		LongArrayShift.bitwiseRotateInnerBits(this.getBits(), this.getWidth(), amount, rowOffset, this.getWidth()+rowOffset);
+	}
+	public void rotateRowsCyclic(int amount, int startRow, int numberOfRows) {
+		numberOfRows=LongArrayShift.normalizeCyclicI(numberOfRows, this.getHeight());
+		for(int i=0;i<numberOfRows;i++) {
+			this.rotateRowCyclic(amount, i+startRow);
+		}
+	}
+	public void rotateRowsCyclic(int amount) {
+		this.rotateRowsCyclic(amount,0,this.getHeight());
+	}
+	
+	public void rotateColumnCyclic(int amount, int column) {
+		int columnOffset=LongArrayShift.normalizeCyclicI(column, this.getWidth());
+		LongQuickBitArray columnArr = this.getColumn(columnOffset, null);
+		columnArr.rotate(amount);
+		this.setColumn(columnOffset, columnArr);
+	}
+	
+	public void rotateColumnsCyclic(int amount, int startColumn, int numberOfColumns) {
+		numberOfColumns=LongArrayShift.normalizeCyclicI(numberOfColumns, this.getHeight());
+		for(int i=0;i<numberOfColumns;i++) {
+			this.rotateColumnCyclic(amount, i+startColumn);
+		}
+	}
+	public void rotateColumnsCyclic(int amount) {
+		this.rotateColumnsCyclic(amount,0,this.getHeight());
+	}
+	
 	
 	public static void main(String[] args) {
 		LongQuickBitMatrix lqbm = new LongQuickBitMatrix(100);
@@ -569,9 +632,11 @@ public class LongQuickBitMatrix {
 			lqbm.set(0, i);
 			lqbm.set(lqbm.getWidth()-1, i);
 		}
+		lqbm.rotateRowsCyclic(-4);
+		lqbm.rotateColumnsCyclic(-4);
 		System.out.println(lqbm);
-		String s = BitStringStream.toString(lqbm.bits, lqbm.getWidth());
-		System.out.println(s);
+//		String s = BitStringStream.toString(lqbm.bits, lqbm.getWidth());
+//		System.out.println(s);
 	}
 
 }

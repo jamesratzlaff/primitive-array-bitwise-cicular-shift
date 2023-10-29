@@ -80,7 +80,7 @@ public class LongQuickBitArray {
 	public boolean get(int i) {
 		return (bits[(i >>> BITS_PER_UNIT_SHIFT)] & (1l << ((long)i & BIT_SHIFT_UNIT_LIMIT_MASK))) != 0;
 	}
-
+	
 	/**
 	 * Sets bit i.
 	 *
@@ -102,7 +102,27 @@ public class LongQuickBitArray {
 	public void flip(int i) {
 		bits[(i >>> BITS_PER_UNIT_SHIFT)] ^= 1l << (i & BIT_SHIFT_UNIT_LIMIT_MASK);
 	}
-
+	
+	private int normalizeCyclic(int i) {
+		return LongArrayShift.normalizeCyclicI(i, this.getSize());
+	}
+	
+	public boolean getCyclic(int i) {
+		i=normalizeCyclic(i);
+		return get(i);
+	}
+	public void setCyclic(int i) {
+		i=normalizeCyclic(i);
+		set(i);
+	}
+	public void unsetCyclic(int i) {
+		i=normalizeCyclic(i);
+		unset(i);
+	}
+	public void flipCyclic(int i) {
+		i=normalizeCyclic(i);
+		flip(i);
+	}
 	/**
 	 * @param from first bit to check
 	 * @return index of first bit that is set, starting from the given index, or
@@ -345,6 +365,12 @@ public class LongQuickBitArray {
 	private static long[] makeArray(int size) {
 		return new long[((size + BIT_SHIFT_UNIT_LIMIT_MASK) >>> BITS_PER_UNIT_SHIFT)];
 	}
+	
+	public LongQuickBitArray rotate(int amount) {
+		LongArrayShift.bitwiseRotate(this.getBitArray(), this.getSize(), amount);
+		return this;
+	}
+	
 	
 	/**
 	 * I have no clue why this does the opposite of what I expect...I figured it out, the binary representation is reversed I guess
